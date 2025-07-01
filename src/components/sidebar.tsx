@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import { Logo } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
 
@@ -96,10 +97,12 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <div
+    <motion.div
       className={`h-full ${
         collapsed ? "w-16" : "w-64"
       } border-r bg-sidebar text-sidebar-foreground flex flex-col transition-all duration-300 ease-in-out relative`}
+      animate={{ width: collapsed ? 70 : 240 }}
+      transition={{ type: "spring", stiffness: 300, damping: 30 }}
     >
       <div className="p-4 border-b flex items-center justify-between">
         {!collapsed && (
@@ -129,147 +132,180 @@ export function Sidebar() {
 
       <div className="flex-1 overflow-auto py-2 px-2">
         <div className="space-y-1 mb-4">
-          {collapsed ? (
-            <Link
-              href="/"
-              className={`flex justify-center py-2 rounded-md transition-colors ${
-                pathname === "/" 
-                  ? "bg-primary" 
-                  : "hover:bg-secondary/50"
-              }`}
-            >
-              <Home size={18} className={pathname === "/" ? "text-primary-foreground" : "text-muted-foreground"} />
-            </Link>
-          ) : (
-            <SidebarItem 
-              icon={<Home size={18} className={pathname === "/" ? "text-primary" : "text-muted-foreground"} />} 
-              label="Home" 
-              href="/"
-            />
-          )}
+          <AnimatePresence mode="wait" initial={false}>
+            {collapsed ? (
+              <motion.div
+                key="collapsed-home"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ duration: 0.2 }}
+              >
+                <Link
+                  href="/"
+                  className={`flex justify-center py-2 rounded-md transition-colors ${
+                    pathname === "/" 
+                      ? "bg-primary" 
+                      : "hover:bg-secondary/50"
+                  }`}
+                >
+                  <Home size={18} className={pathname === "/" ? "text-primary-foreground" : "text-muted-foreground"} />
+                </Link>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="expanded-home"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.2 }}
+              >
+                <SidebarItem 
+                  icon={<Home size={18} className={pathname === "/" ? "text-primary" : "text-muted-foreground"} />} 
+                  label="Home" 
+                  href="/"
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Common sections for all roles */}
-        {!collapsed ? (
-          <>
-            <SidebarSection title="AI Agents">
-              <SidebarItem
-                icon={
-                  <BotIcon size={18} className={pathname === "/chat" ? "text-primary-foreground" : "text-muted-foreground"} />
-                }
-                label="AI Assistant"
-                active={pathname === "/chat"}
-                badge="NEW"
-                href="/chat"
-              />
-              <div className="ml-6 mt-1">
+        <AnimatePresence mode="wait" initial={false}>
+          {!collapsed ? (
+            <motion.div
+              key="expanded-sections"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.2, delay: 0.1 }}
+            >
+              <SidebarSection title="AI Agents">
                 <SidebarItem
-                  icon={<Pencil size={16} className="text-muted-foreground" />}
-                  label="New Chat"
+                  icon={
+                    <BotIcon size={18} className={pathname === "/chat" ? "text-primary-foreground" : "text-muted-foreground"} />
+                  }
+                  label="AI Assistant"
+                  active={pathname === "/chat"}
+                  badge="NEW"
                   href="/chat"
                 />
-              </div>
-            </SidebarSection>
-
-            {/* Admin-only sections */}
-            {role === "Admin" && (
-              <SidebarSection title="Administration">
-                <SidebarItem
-                  icon={
-                    <Database size={18} className={pathname === "/data-ingestion" ? "text-primary-foreground" : "text-muted-foreground"} />
-                  }
-                  label="Data Ingestion"
-                  active={pathname === "/data-ingestion"}
-                  href="/data-ingestion"
-                />
-                <SidebarItem
-                  icon={
-                    <Clock size={18} className={pathname === "/periodic-ingestion" ? "text-primary-foreground" : "text-muted-foreground"} />
-                  }
-                  label="Periodic Ingestion"
-                  active={pathname === "/periodic-ingestion"}
-                  href="/periodic-ingestion"
-                />
-                <SidebarItem
-                  icon={
-                    <BarChart size={18} className={pathname === "/metrics-dashboard" ? "text-primary-foreground" : "text-muted-foreground"} />
-                  }
-                  label="Metrics Dashboard"
-                  active={pathname === "/metrics-dashboard"}
-                  href="/metrics-dashboard"
-                />
-                <SidebarItem
-                  icon={
-                    <FileText size={18} className={pathname === "/annotations" ? "text-primary-foreground" : "text-muted-foreground"} />
-                  }
-                  label="Annotations"
-                  active={pathname === "/annotations"}
-                  href="/annotations"
-                />
+                <div className="ml-6 mt-1">
+                  <SidebarItem
+                    icon={<Pencil size={16} className="text-muted-foreground" />}
+                    label="New Chat"
+                    href="/chat"
+                  />
+                </div>
               </SidebarSection>
-            )}
-          </>
-        ) : (
-          <div className="space-y-6 flex flex-col items-center pt-2">
-            <Link
-              href="/chat"
-              className={`p-2 rounded-md transition-colors ${
-                pathname === "/chat"
-                  ? "bg-primary"
-                  : "hover:bg-secondary/50"
-              }`}
-            >
-              <BotIcon size={18} className={pathname === "/chat" ? "text-primary-foreground" : "text-muted-foreground"} />
-            </Link>
 
-            {/* Admin-only icons in collapsed mode */}
-            {role === "Admin" && (
-              <>
-                <Link
-                  href="/data-ingestion"
-                  className={`p-2 rounded-md transition-colors ${
-                    pathname === "/data-ingestion"
-                      ? "bg-primary"
-                      : "hover:bg-secondary/50"
-                  }`}
-                >
-                  <Database size={18} className={pathname === "/data-ingestion" ? "text-primary-foreground" : "text-muted-foreground"} />
-                </Link>
-                <Link
-                  href="/periodic-ingestion"
-                  className={`p-2 rounded-md transition-colors ${
-                    pathname === "/periodic-ingestion"
-                      ? "bg-primary"
-                      : "hover:bg-secondary/50"
-                  }`}
-                >
-                  <Clock size={18} className={pathname === "/periodic-ingestion" ? "text-primary-foreground" : "text-muted-foreground"} />
-                </Link>
-                <Link
-                  href="/metrics-dashboard"
-                  className={`p-2 rounded-md transition-colors ${
-                    pathname === "/metrics-dashboard"
-                      ? "bg-primary"
-                      : "hover:bg-secondary/50"
-                  }`}
-                >
-                  <BarChart size={18} className={pathname === "/metrics-dashboard" ? "text-primary-foreground" : "text-muted-foreground"} />
-                </Link>
-                <Link
-                  href="/annotations"
-                  className={`p-2 rounded-md transition-colors ${
-                    pathname === "/annotations"
-                      ? "bg-primary"
-                      : "hover:bg-secondary/50"
-                  }`}
-                >
-                  <FileText size={18} className={pathname === "/annotations" ? "text-primary-foreground" : "text-muted-foreground"} />
-                </Link>
-              </>
-            )}
-          </div>
-        )}
+              {/* Admin-only sections */}
+              {role === "Admin" && (
+                <SidebarSection title="Administration">
+                  <SidebarItem
+                    icon={
+                      <Database size={18} className={pathname === "/data-ingestion" ? "text-primary-foreground" : "text-muted-foreground"} />
+                    }
+                    label="Data Ingestion"
+                    active={pathname === "/data-ingestion"}
+                    href="/data-ingestion"
+                  />
+                  <SidebarItem
+                    icon={
+                      <Clock size={18} className={pathname === "/periodic-ingestion" ? "text-primary-foreground" : "text-muted-foreground"} />
+                    }
+                    label="Periodic Ingestion"
+                    active={pathname === "/periodic-ingestion"}
+                    href="/periodic-ingestion"
+                  />
+                  <SidebarItem
+                    icon={
+                      <BarChart size={18} className={pathname === "/metrics-dashboard" ? "text-primary-foreground" : "text-muted-foreground"} />
+                    }
+                    label="Metrics Dashboard"
+                    active={pathname === "/metrics-dashboard"}
+                    href="/metrics-dashboard"
+                  />
+                  <SidebarItem
+                    icon={
+                      <FileText size={18} className={pathname === "/annotations" ? "text-primary-foreground" : "text-muted-foreground"} />
+                    }
+                    label="Annotations"
+                    active={pathname === "/annotations"}
+                    href="/annotations"
+                  />
+                </SidebarSection>
+              )}
+            </motion.div>
+          ) : (
+            <motion.div
+              key="collapsed-icons"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              transition={{ duration: 0.2 }}
+              className="space-y-6 flex flex-col items-center pt-2"
+            >
+              <Link
+                href="/chat"
+                className={`p-2 rounded-md transition-colors ${
+                  pathname === "/chat"
+                    ? "bg-primary"
+                    : "hover:bg-secondary/50"
+                }`}
+              >
+                <BotIcon size={18} className={pathname === "/chat" ? "text-primary-foreground" : "text-muted-foreground"} />
+              </Link>
+
+              {/* Admin-only icons in collapsed mode */}
+              {role === "Admin" && (
+                <>
+                  <Link
+                    href="/data-ingestion"
+                    className={`p-2 rounded-md transition-colors ${
+                      pathname === "/data-ingestion"
+                        ? "bg-primary"
+                        : "hover:bg-secondary/50"
+                    }`}
+                  >
+                    <Database size={18} className={pathname === "/data-ingestion" ? "text-primary-foreground" : "text-muted-foreground"} />
+                  </Link>
+                  <Link
+                    href="/periodic-ingestion"
+                    className={`p-2 rounded-md transition-colors ${
+                      pathname === "/periodic-ingestion"
+                        ? "bg-primary"
+                        : "hover:bg-secondary/50"
+                    }`}
+                  >
+                    <Clock size={18} className={pathname === "/periodic-ingestion" ? "text-primary-foreground" : "text-muted-foreground"} />
+                  </Link>
+                  <Link
+                    href="/metrics-dashboard"
+                    className={`p-2 rounded-md transition-colors ${
+                      pathname === "/metrics-dashboard"
+                        ? "bg-primary"
+                        : "hover:bg-secondary/50"
+                    }`}
+                  >
+                    <BarChart size={18} className={pathname === "/metrics-dashboard" ? "text-primary-foreground" : "text-muted-foreground"} />
+                  </Link>
+                  <Link
+                    href="/annotations"
+                    className={`p-2 rounded-md transition-colors ${
+                      pathname === "/annotations"
+                        ? "bg-primary"
+                        : "hover:bg-secondary/50"
+                    }`}
+                  >
+                    <FileText size={18} className={pathname === "/annotations" ? "text-primary-foreground" : "text-muted-foreground"} />
+                  </Link>
+                </>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
-    </div>
+    </motion.div>
   );
 }
