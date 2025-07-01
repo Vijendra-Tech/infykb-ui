@@ -1,6 +1,6 @@
 ## InfinityKB
 
-InfinityKB is a knowledge base platform that allows users to create and manage their knowledge base in a secure and efficient way.
+InfinityKB is a knowledge base platform that allows users to create and manage their knowledge base in a secure and efficient way. AI Agents for L2 Support.
 
 ## Features
 
