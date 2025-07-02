@@ -32,27 +32,64 @@ export function ChatInterface() {
         {messages.length === 0 ? (
           <motion.div 
             className="flex-1 flex items-center justify-center"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
           >
-            <div className="max-w-2xl w-full text-center space-y-4">
+            <div className="max-w-2xl w-full text-center space-y-8 relative">
+              <motion.div
+                className="absolute -z-10 w-56 h-56 bg-primary/5 rounded-full blur-3xl"
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.2, duration: 1.2, ease: "easeOut" }}
+                style={{ left: 'calc(50% - 112px)', top: -40 }}
+              />
+              <motion.div 
+                initial={{ y: -20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.3, duration: 0.8, type: "spring", stiffness: 100 }}
+              >
+                <Sparkles className="h-12 w-12 text-primary mx-auto mb-6 opacity-80" />
+              </motion.div>
               <motion.h1 
-                className="text-2xl font-medium"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.2, duration: 0.5 }}
+                className="text-3xl font-medium bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/70"
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.5, duration: 0.7, type: "spring", stiffness: 100 }}
               >
                 Good morning,
               </motion.h1>
               <motion.p 
-                className="text-xl"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.4, duration: 0.5 }}
+                className="text-xl text-foreground/80"
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.7, duration: 0.7, type: "spring", stiffness: 100 }}
               >
-                What do you want to create?
+                How can I help you today?
               </motion.p>
+              <motion.div
+                className="pt-6"
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.9, duration: 0.7, type: "spring", stiffness: 100 }}
+              >
+                <div className="flex flex-wrap gap-3 justify-center">
+                  {["New knowledge source", "Data visualization", "API integration"].map((suggestion, i) => (
+                    <motion.button
+                      key={suggestion}
+                      className="px-4 py-2 rounded-full bg-muted hover:bg-muted/80 text-sm transition-colors"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.98 }}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 1.1 + (i * 0.1), duration: 0.5 }}
+                      onClick={() => setInputValue(suggestion)}
+                    >
+                      {suggestion}
+                    </motion.button>
+                  ))}
+                </div>
+              </motion.div>
             </div>
           </motion.div>
         ) : (

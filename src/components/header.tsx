@@ -24,15 +24,15 @@ interface MobileMenuItemProps {
 
 function MobileMenuItem({ icon, label, href, active, badge, onClick }: MobileMenuItemProps) {
   const itemVariants = {
-    hidden: { opacity: 0, x: -20 },
-    visible: { opacity: 1, x: 0 }
+    hidden: { opacity: 0, y: -10 },
+    visible: { opacity: 1, y: 0 }
   };
   
   const content = (
     <motion.div
       className={`flex items-center gap-3 px-3 py-2 rounded-md ${active ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
       variants={itemVariants}
-      whileHover={{ x: 5 }}
+      whileHover={{ backgroundColor: active ? undefined : 'var(--muted)' }}
       whileTap={{ scale: 0.98 }}
     >
       <span className={active ? 'text-primary-foreground' : 'text-muted-foreground'}>
@@ -85,7 +85,7 @@ export function Header() {
 
   return (
     <>
-      <header className="h-14 border-b bg-background flex items-center px-4 sticky top-0 z-20">
+      <header className="h-14 border-b border-border bg-background flex items-center px-4 sticky top-0 z-20">
         {collapsed && (
           <div className="mr-4">
             <Logo size="sm" variant="default" />
@@ -109,7 +109,6 @@ export function Header() {
             size="icon" 
             className="rounded-full"
             onClick={() => {
-              // Create a new chat and navigate to it
               addChat({ title: "New Chat" });
               router.push("/chat");
             }}
@@ -117,7 +116,6 @@ export function Header() {
             <Edit className="h-5 w-5" />
             <span className="sr-only">New Chat</span>
           </Button>
-          {/* Premium button removed */}
           <ModeToggle />
           <UserProfileDropdown
             userName="Vijendra Rana"
@@ -163,9 +161,10 @@ export function Header() {
               initial={{ x: "100%", opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: "100%", opacity: 0 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              transition={{ type: "spring", damping: 20, stiffness: 250, mass: 0.8 }}
               onClick={(e) => e.stopPropagation()}
             >
+              {/* X icon removed */}
               <div className="w-60">
                 <motion.div
                   className="flex flex-col space-y-3"

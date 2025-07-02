@@ -2,17 +2,18 @@
 import { useState } from "react";
 import { useSidebar } from "@/context/sidebar-context";
 import { useRoleStore } from "@/store/use-role-store";
+import { useChatHistoryStore } from "@/store/use-chat-history-store";
+import { useDataIngestionStore } from "@/store/use-data-ingestion-store";
 import {
   Home,
   Pencil,
-  ChevronLeft,
-  ChevronRight,
   Menu,
   BotIcon,
   Database,
   Clock,
   BarChart,
   FileText,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
@@ -102,33 +103,42 @@ export function Sidebar() {
         collapsed ? "w-16" : "w-64"
       } border-r bg-sidebar text-sidebar-foreground flex flex-col transition-all duration-300 ease-in-out relative`}
       animate={{ width: collapsed ? 70 : 240 }}
-      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      transition={{ type: "spring", stiffness: 250, damping: 25, mass: 0.8 }}
     >
-      <div className="p-4 border-b flex items-center justify-between">
+      <div className="h-14 px-4 flex items-center justify-between bg-gradient-to-r from-sidebar to-sidebar/95">
         {!collapsed && (
           <>
-            <Logo size="md" variant="sidebar" />
-            <Button
-              variant="ghost"
-              size="icon"
-              className="rounded-full ml-auto"
-              onClick={() => setCollapsed(true)}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.3 }}
             >
-              <ChevronLeft size={18} />
-            </Button>
+              <Logo size="md" variant="sidebar" />
+            </motion.div>
+            <motion.button
+              className="p-2 rounded-full hover:bg-muted/30 ml-auto flex items-center justify-center"
+              onClick={() => setCollapsed(true)}
+              whileHover={{ scale: 1.1, backgroundColor: 'rgba(255,255,255,0.1)' }}
+              whileTap={{ scale: 0.9 }}
+              aria-label="Collapse sidebar"
+            >
+              <X size={18} />
+            </motion.button>
           </>
         )}
         {collapsed && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="mx-auto"
+          <motion.button
+            className="p-2 rounded-full hover:bg-muted/30 mx-auto flex items-center justify-center"
             onClick={() => setCollapsed(false)}
+            whileHover={{ scale: 1.1, backgroundColor: 'rgba(255,255,255,0.1)' }}
+            whileTap={{ scale: 0.9 }}
+            aria-label="Expand sidebar"
           >
             <Menu size={20} />
-          </Button>
+          </motion.button>
         )}
       </div>
+      <div className="h-1 bg-gradient-to-r from-primary/20 via-primary/30 to-primary/10"></div>
 
       <div className="flex-1 overflow-auto py-2 px-2">
         <div className="space-y-1 mb-4">
@@ -183,19 +193,32 @@ export function Sidebar() {
               <SidebarSection title="AI Agents">
                 <SidebarItem
                   icon={
-                    <BotIcon size={18} className={pathname === "/chat" ? "text-primary-foreground" : "text-muted-foreground"} />
+                    <BotIcon size={18} className="text-muted-foreground" />
                   }
-                  label="AI Assistant"
-                  active={pathname === "/chat"}
-                  badge="NEW"
+                  label="L2 Support Assistant"
+                  active={false}
                   href="/chat"
                 />
                 <div className="ml-6 mt-1">
-                  <SidebarItem
-                    icon={<Pencil size={16} className="text-muted-foreground" />}
-                    label="New Chat"
-                    href="/chat"
-                  />
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    className="relative"
+                  >
+
+                    <Link
+                      href="/chat"
+                      onClick={() => {
+                        const { addChat } = useChatHistoryStore.getState();
+                        addChat({ title: "New Chat" });
+                      }}
+                      className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${pathname === "/chat" ? "bg-primary text-primary-foreground" : "bg-secondary/30 hover:bg-secondary/50"} border border-primary/10`}
+                    >
+                      <div className={pathname === "/chat" ? "text-primary-foreground" : "text-primary"}>
+                        <Pencil size={16} />
+                      </div>
+                      <span className="flex-1 font-medium text-sm">New Chat</span>
+                    </Link>
+                  </motion.div>
                 </div>
               </SidebarSection>
 
