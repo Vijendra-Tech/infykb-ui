@@ -210,7 +210,7 @@ export function DataIngestion() {
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="container mx-auto py-6 px-4 md:px-6 lg:px-8 space-y-6">
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md mb-4 flex items-center justify-between">
           <div className="flex items-center">
@@ -223,11 +223,11 @@ export function DataIngestion() {
         </div>
       )}
 
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center mb-4 md:mb-6">
         <h1 className="text-2xl font-bold">Data Ingestion</h1>
         <Dialog open={isAddDialogOpen} onOpenChange={handleDialogChange}>
           <DialogTrigger asChild>
-            <Button className="flex items-center gap-2">
+            <Button className="flex items-center gap-2 px-3 md:px-4">
               <Plus className="h-4 w-4" />
               Add New Source
             </Button>
@@ -453,34 +453,34 @@ export function DataIngestion() {
         </Dialog>
       </div>
 
-      <Card>
-        <CardHeader className="bg-gray-50 dark:bg-gray-800/50">
+      <Card className="overflow-hidden shadow-sm md:rounded-lg">
+        <CardHeader className="bg-gray-50 p-4 md:p-6 dark:bg-gray-800/50">
           <CardTitle className="text-lg">Knowledge Sources</CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
+        <CardContent className="p-0 md:p-2">
+          <Table className="md:table-auto">
+            <TableHeader className="bg-gray-50">
               <TableRow>
-                <TableHead className="w-[200px]">Source Name</TableHead>
-                <TableHead className="w-[120px]">Type</TableHead>
-                <TableHead className="w-[100px]">Status</TableHead>
-                <TableHead className="w-[180px]">Source Details</TableHead>
-                <TableHead className="w-[150px]">Last Ingested</TableHead>
-                <TableHead className="w-[100px] text-right">Record Count</TableHead>
-                <TableHead className="w-[150px] text-right">Actions</TableHead>
+                <TableHead className="w-[200px] p-3 md:p-4">Source Name</TableHead>
+                <TableHead className="w-[120px] p-3 md:p-4">Type</TableHead>
+                <TableHead className="w-[100px] p-3 md:p-4">Status</TableHead>
+                <TableHead className="w-[180px] p-3 md:p-4">Source Details</TableHead>
+                <TableHead className="w-[150px] p-3 md:p-4">Last Ingested</TableHead>
+                <TableHead className="w-[100px] text-right p-3 md:p-4">Record Count</TableHead>
+                <TableHead className="w-[150px] text-right p-3 md:p-4">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {sources.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="py-12">
+                  <TableCell colSpan={7} className="py-8 md:py-12">
                     <div className="flex flex-col items-center justify-center text-center space-y-6">
-                      <div className="bg-orange-50 p-4 rounded-full">
+                      <div className="bg-orange-50 p-4 md:p-5 rounded-full">
                         <Database className="h-10 w-10 text-orange-500" />
                       </div>
-                      <div className="space-y-2">
+                      <div className="space-y-2 px-2 md:px-4">
                         <h3 className="text-xl font-semibold text-gray-900">Data Ingestion</h3>
-                        <p className="text-gray-500 max-w-md">
+                        <p className="text-gray-500 max-w-md mx-auto px-2 md:px-4">
                           Upload and manage your knowledge base data sources.
                           Import documents, websites, and other content to train your
                           AI assistant.
@@ -488,7 +488,7 @@ export function DataIngestion() {
                       </div>
                       <Button 
                         onClick={() => setIsAddDialogOpen(true)} 
-                        className="mt-2 flex items-center gap-2"
+                        className="mt-2 flex items-center gap-2 px-3 md:px-4"
                       >
                         <Plus className="h-4 w-4" />
                         Add New Source
@@ -499,14 +499,14 @@ export function DataIngestion() {
               ) : (
                 sources.map((source) => (
                   <TableRow key={source.id}>
-                    <TableCell className="font-medium">{source.name}</TableCell>
+                    <TableCell className="font-medium p-3 md:p-4">{source.name}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         {getTypeIcon(source.type)}
                         <span>{source.type}</span>
                       </div>
                     </TableCell>
-                    <TableCell>{getStatusBadge(source.status)}</TableCell>
+                    <TableCell className="p-3 md:p-4">{getStatusBadge(source.status)}</TableCell>
                     <TableCell>
                       {["JIRA", "Confluence", "ADO", "API Endpoint", "Database"].includes(source.type) && source.url ? (
                         <div className="text-xs">

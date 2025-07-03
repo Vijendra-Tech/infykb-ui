@@ -1,6 +1,5 @@
 "use client";
-import { useState, useRef, useCallback, useEffect } from "react";
-import { useLayoutEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Send, ChevronDown, MessageSquare, PenLine, ExternalLink } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -45,85 +44,10 @@ export function ChatInterface() {
     { name: "GPT-HQ", description: null }
   ];
   
-  // State to control visibility of the chat box in Agent Mode
-  const [showAgentChatBox, setShowAgentChatBox] = useState(true);
-  const [expandedView, setExpandedView] = useState<'agent' | 'support' | 'balanced'>('balanced');
-  const [dividerPosition, setDividerPosition] = useState(33); // Percentage (0-100)
-  const [isDragging, setIsDragging] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  
-  // Handle mouse dragging for divider
-  const handleMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
-  };
-  
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (isDragging && containerRef.current) {
-      const containerRect = containerRef.current.getBoundingClientRect();
-      const containerWidth = containerRect.width;
-      const mouseX = e.clientX - containerRect.left;
-      
-      // Calculate percentage (constrain between 20% and 80%)
-      let newPosition = (mouseX / containerWidth) * 100;
-      newPosition = Math.max(20, Math.min(80, newPosition));
-      
-      // Round to nearest integer for better performance
-      newPosition = Math.round(newPosition);
-      
-      setDividerPosition(newPosition);
-      
-      // Update expanded view based on position
-      if (newPosition < 30) {
-        setExpandedView('support');
-      } else if (newPosition > 60) {
-        setExpandedView('agent');
-      } else {
-        setExpandedView('balanced');
-      }
-      
-      // Force a re-render by updating a class
-      document.documentElement.style.setProperty('--divider-position', `${newPosition}%`);
-      document.documentElement.style.setProperty('--divider-position-inverse', `${100 - newPosition}%`);
-    }
-  }, [isDragging]);
-  
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-  }, []);
-  
-  // Add and remove event listeners
-  useEffect(() => {
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-    } else {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    }
-    
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isDragging, handleMouseMove, handleMouseUp]);
-  
-  // Update CSS variables when divider position changes
-  useLayoutEffect(() => {
-    document.documentElement.style.setProperty('--divider-position', `${dividerPosition}%`);
-    document.documentElement.style.setProperty('--divider-position-inverse', `${100 - dividerPosition}%`);
-  }, [dividerPosition]);
-
   const handleSendMessage = () => {
     if (inputValue.trim()) {
       // Add user message
       setMessages([...messages, { type: 'user', content: inputValue }]);
-      
-      // If in Agent Mode, hide the chat box
-      if (activeButton === 'agent') {
-        setShowAgentChatBox(false);
-      }
       
       // Simulate assistant response after a delay
       setTimeout(() => {
@@ -138,14 +62,14 @@ export function ChatInterface() {
   };
   
   // Function to render message bubbles for chat
-  const renderMessage = (message: any, index: number, isCustomerView: boolean = false) => {
+  const renderMessage = (message: any, isCustomerView: boolean = false) => {
     const isCustomer = message.sender === 'customer';
     const isAgent = message.sender === 'agent';
     const isSuggestion = message.sender === 'suggestion';
     
     if (isSuggestion) {
       return (
-        <div key={`suggestion-${index}`} className="flex justify-end mb-2">
+        <div className="flex justify-end mb-2">
           <button className="flex items-center text-sm text-blue-500 hover:text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-full">
             <span className="mr-1">{message.content}</span>
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -157,7 +81,7 @@ export function ChatInterface() {
     }
     
     return (
-      <div key={`message-${index}`} className={`flex ${isCustomer ? 'justify-end' : 'justify-start'} mb-4`}>
+      <div className={`flex ${isCustomer ? 'justify-end' : 'justify-start'} mb-4`}>
         <div className={`max-w-[80%] p-3 rounded-lg ${isCustomer ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
           <p className="whitespace-pre-line text-sm">{message.content}</p>
         </div>
@@ -226,78 +150,17 @@ export function ChatInterface() {
         </div>
       ) : (
         // Agent Mode Interface with Split View
-        <div className="flex-1 overflow-auto" ref={containerRef}>
-          <div className="flex flex-col md:flex-row h-auto md:h-8 border-b border-gray-200">
-            <div 
-              className={`w-full md:w-[var(--divider-position)] bg-rose-100 text-rose-800 flex items-center justify-center text-sm font-medium border-b md:border-b-0 md:border-r border-gray-200 py-2 md:py-0 relative transition-all duration-300`}
-              onClick={() => {
-                if (expandedView === 'agent') {
-                  setExpandedView('balanced');
-                  setDividerPosition(33);
-                } else {
-                  setExpandedView('agent');
-                  setDividerPosition(66);
-                }
-              }}
-            >
-              <span>AI Agent View</span>
-              <button className="absolute right-2 text-rose-600 hidden md:block">
-                {expandedView === 'agent' ? (
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="15 18 9 12 15 6"></polyline>
-                  </svg>
-                ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="9 18 15 12 9 6"></polyline>
-                  </svg>
-                )}
-              </button>
-            </div>
-            <div 
-              className={`w-full md:w-[var(--divider-position-inverse)] bg-blue-100 text-blue-800 flex items-center justify-center text-sm font-medium py-2 md:py-0 relative transition-all duration-300`}
-              onClick={() => {
-                if (expandedView === 'support') {
-                  setExpandedView('balanced');
-                  setDividerPosition(33);
-                } else {
-                  setExpandedView('support');
-                  setDividerPosition(25);
-                }
-              }}
-            >
-              <span>Support Representative View</span>
-              <button className="absolute left-2 text-blue-600 hidden md:block">
-                {expandedView === 'support' ? (
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="9 18 15 12 9 6"></polyline>
-                  </svg>
-                ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="15 18 9 12 15 6"></polyline>
-                  </svg>
-                )}
-              </button>
+        <div className="flex-1 overflow-auto">
+          <div className="bg-rose-100 text-rose-800 py-1 px-4 text-center text-sm font-medium">
+            <div className="flex justify-between">
+              <div>Customer View</div>
+              <div>Support Representative View</div>
             </div>
           </div>
           
-          <div className="flex flex-col md:flex-row h-auto md:h-[calc(100%-32px)] relative">
-            {/* Resizable divider handle - only visible on desktop */}
-            <div 
-              className={`absolute top-1/2 transform -translate-y-1/2 hidden md:flex flex-col items-center justify-center z-10 ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
-              style={{
-                left: `var(--divider-position)`,
-                transition: isDragging ? 'none' : 'left 0.3s ease'
-              }}
-              onMouseDown={handleMouseDown}
-            >
-              <div 
-                className={`w-1 h-16 ${isDragging ? 'bg-blue-500' : 'bg-gray-300 hover:bg-gray-400'} rounded-full cursor-col-resize`}
-              ></div>
-            </div>
-            {/* AI Agent View */}
-            <div 
-              className={`w-full md:w-[var(--divider-position)] border-b md:border-b-0 md:border-r border-gray-200 flex flex-col transition-all duration-300`}
-            >
+          <div className="flex h-[calc(100%-32px)]">
+            {/* Customer View */}
+            <div className="w-1/2 border-r border-gray-200 flex flex-col">
               <div className="p-4 bg-gray-50 border-b border-gray-200">
                 <div className="text-sm text-gray-600">
                   <p className="font-medium">Hi, I'm Blossom, your support representative.</p>
@@ -307,44 +170,29 @@ export function ChatInterface() {
               
               <div className="flex-1 overflow-auto p-4">
                 <div className="space-y-4">
-                  {customerMessages.map((message, index) => renderMessage(message, index, true))}
+                  {customerMessages.map((message, index) => renderMessage(message, true))}
                 </div>
               </div>
               
-              {showAgentChatBox && (
-                <div className="p-4 border-t border-gray-200">
-                  <div className="relative">
-                    <textarea 
-                      className="w-full rounded-lg border border-gray-300 p-3 pr-10 resize-none focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" 
-                      placeholder="Message..." 
-                      rows={1}
-                      value={inputValue}
-                      onChange={(e) => setInputValue(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && !e.shiftKey) {
-                          e.preventDefault();
-                          handleSendMessage();
-                        }
-                      }}
-                    />
-                    <button 
-                      className="absolute right-3 bottom-3 text-gray-500 hover:text-gray-700"
-                      onClick={handleSendMessage}
-                    >
-                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
-                      </svg>
-                    </button>
-                  </div>
+              <div className="p-4 border-t border-gray-200">
+                <div className="relative">
+                  <textarea 
+                    className="w-full rounded-lg border border-gray-300 p-3 pr-10 resize-none focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" 
+                    placeholder="Message..." 
+                    rows={1}
+                  />
+                  <button className="absolute right-3 bottom-3 text-gray-500 hover:text-gray-700">
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                    </svg>
+                  </button>
                 </div>
-              )}
+              </div>
             </div>
             
             {/* Support Representative View */}
-            <div 
-              className={`w-full md:w-[var(--divider-position-inverse)] flex flex-col md:flex-row transition-all duration-300`}
-            >
-              <div className="flex-1 flex flex-col md:border-r border-gray-200">
+            <div className="w-1/2 flex">
+              <div className="flex-1 flex flex-col border-r border-gray-200">
                 <div className="p-4 bg-gray-50 border-b border-gray-200">
                   <div className="text-sm">
                     <p>Hi, I'm Blossom, your support representative. How can I help you today?</p>
@@ -353,50 +201,32 @@ export function ChatInterface() {
                 
                 <div className="flex-1 overflow-auto p-4">
                   <div className="space-y-4">
-                    {supportMessages.map((message, index) => renderMessage(message, index))}
+                    {supportMessages.map((message, index) => renderMessage(message))}                    
                   </div>
                 </div>
                 
-                {showAgentChatBox && (
-                  <div className="p-4 border-t border-gray-200">
-                    <div className="flex items-center gap-2 mb-2">
-                      <button 
-                        className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-full text-xs font-medium"
-                        onClick={handleSendMessage}
-                      >
-                        Send now
-                      </button>
-                      <button className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-full text-xs font-medium">Edit</button>
-                    </div>
-                    <div className="relative">
-                      <textarea 
-                        className="w-full rounded-lg border border-gray-300 p-3 pr-10 resize-none focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" 
-                        placeholder="Message..." 
-                        rows={1}
-                        value={inputValue}
-                        onChange={(e) => setInputValue(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && !e.shiftKey) {
-                            e.preventDefault();
-                            handleSendMessage();
-                          }
-                        }}
-                      />
-                      <button 
-                        className="absolute right-3 bottom-3 text-gray-500 hover:text-gray-700"
-                        onClick={handleSendMessage}
-                      >
-                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
-                        </svg>
-                      </button>
-                    </div>
+                <div className="p-4 border-t border-gray-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <button className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-full text-xs font-medium">Send now</button>
+                    <button className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-full text-xs font-medium">Edit</button>
                   </div>
-                )}
+                  <div className="relative">
+                    <textarea 
+                      className="w-full rounded-lg border border-gray-300 p-3 pr-10 resize-none focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" 
+                      placeholder="Message..." 
+                      rows={1}
+                    />
+                    <button className="absolute right-3 bottom-3 text-gray-500 hover:text-gray-700">
+                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
               </div>
               
               {/* Customer Details Panel */}
-              <div className="w-full md:w-96 bg-white md:border-l border-gray-200 p-4 overflow-auto border-t md:border-t-0 mt-4 md:mt-0">
+              <div className="w-64 bg-white border-l border-gray-200 p-4 overflow-auto">
                 <div className="space-y-6">
                   <div>
                     <h3 className="text-sm font-medium mb-2">Customer details</h3>
@@ -465,23 +295,23 @@ export function ChatInterface() {
       
       {/* Input area - fixed at bottom */}
       <motion.div 
-        className="border-t p-2 md:p-4 bg-background dark:bg-gray-900"
+        className="border-t p-4 bg-background dark:bg-gray-900"
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.3, duration: 0.5 }}
       >
-        <div className="w-full max-w-4xl mx-auto">
+        <div className="max-w-4xl mx-auto">
           <div className="relative">
             <div className="p-2 md:px-4">
               <div className="flex items-center">
-                <div className="flex w-full flex-col md:flex-row items-center pb-4 md:pb-1">
+                <div className="flex w-full items-center pb-4 md:pb-1">
                   <motion.div 
                     className="flex w-full flex-col gap-1.5 rounded-2xl p-2.5 pl-1.5 bg-background dark:bg-gray-800 border border-input dark:border-gray-700 shadow-sm transition-colors"
                     whileHover={{ boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)" }}
                     animate={{ boxShadow: inputValue ? "0 2px 8px rgba(0, 0, 0, 0.08)" : "none" }}
                   >
                     {/* Model selector and action buttons */}
-                    <div className="flex flex-wrap justify-between items-center px-2 md:px-4 py-1">
+                    <div className="flex justify-between items-center px-4 py-1">
                       <div className="flex items-center gap-2">
                         <Button 
                           variant={activeButton === 'agent' ? "default" : "ghost"} 
