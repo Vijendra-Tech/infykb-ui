@@ -20,6 +20,11 @@ import { useRouter, usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Logo } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface SidebarItemProps {
   icon: React.ReactNode;
@@ -30,24 +35,49 @@ interface SidebarItemProps {
 }
 
 const SidebarItem = ({ icon, label, active, badge, href = "#" }: SidebarItemProps) => {
-  return (
-    <Link
-      href={href}
-      className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${
-        active 
-          ? "bg-primary text-primary-foreground" 
-          : "hover:bg-secondary/50"
-      }`}
-    >
-      <div className={active ? "text-primary-foreground" : "text-muted-foreground"}>{icon}</div>
-      <span className={`flex-1 ${active ? "font-medium" : ""}`}>{label}</span>
-      {badge && (
-        <span className="px-1.5 py-0.5 text-xs bg-white/20 text-white rounded-md">
-          {badge}
-        </span>
-      )}
-    </Link>
-  );
+  const { collapsed } = useSidebar();
+  
+  if (!collapsed) {
+    return (
+      <Link
+        href={href}
+        className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${
+          active 
+            ? "bg-primary text-primary-foreground" 
+            : "hover:bg-secondary/50"
+        }`}
+      >
+        <div className={active ? "text-primary-foreground" : "text-muted-foreground"}>{icon}</div>
+        <span className={`flex-1 ${active ? "font-medium" : ""}`}>{label}</span>
+        {badge && (
+          <span className="px-1.5 py-0.5 text-xs bg-white/20 text-white rounded-md">
+            {badge}
+          </span>
+        )}
+      </Link>
+    );
+  } else {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Link
+            href={href}
+            className={`flex justify-center items-center p-2 rounded-md transition-colors ${
+              active 
+                ? "bg-primary text-primary-foreground" 
+                : "hover:bg-secondary/50"
+            }`}
+          >
+            <div className={active ? "text-primary-foreground" : "text-muted-foreground"}>{icon}</div>
+          </Link>
+        </TooltipTrigger>
+        <TooltipContent side="right">
+          {label}
+          {badge && ` (${badge})`}
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
 };
 
 const SidebarSection = ({
@@ -127,15 +157,20 @@ export function Sidebar() {
           </>
         )}
         {collapsed && (
-          <motion.button
-            className="p-2 rounded-full hover:bg-muted/30 mx-auto flex items-center justify-center"
-            onClick={() => setCollapsed(false)}
-            whileHover={{ scale: 1.1, backgroundColor: 'rgba(255,255,255,0.1)' }}
-            whileTap={{ scale: 0.9 }}
-            aria-label="Expand sidebar"
-          >
-            <Menu size={20} />
-          </motion.button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <motion.button
+                className="p-2 rounded-full hover:bg-muted/30 mx-auto flex items-center justify-center"
+                onClick={() => setCollapsed(false)}
+                whileHover={{ scale: 1.1, backgroundColor: 'rgba(255,255,255,0.1)' }}
+                whileTap={{ scale: 0.9 }}
+                aria-label="Expand sidebar"
+              >
+                <Menu size={20} />
+              </motion.button>
+            </TooltipTrigger>
+            <TooltipContent side="right">Expand sidebar</TooltipContent>
+          </Tooltip>
         )}
       </div>
       <div className="h-1 bg-gradient-to-r from-primary/20 via-primary/30 to-primary/10"></div>
@@ -151,16 +186,21 @@ export function Sidebar() {
                 exit={{ opacity: 0, scale: 0.8 }}
                 transition={{ duration: 0.2 }}
               >
-                <Link
-                  href="/"
-                  className={`flex justify-center py-2 rounded-md transition-colors ${
-                    pathname === "/" 
-                      ? "bg-primary" 
-                      : "hover:bg-secondary/50"
-                  }`}
-                >
-                  <Home size={18} className={pathname === "/" ? "text-primary-foreground" : "text-muted-foreground"} />
-                </Link>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Link
+                      href="/"
+                      className={`flex justify-center py-2 rounded-md transition-colors ${
+                        pathname === "/" 
+                          ? "bg-primary" 
+                          : "hover:bg-secondary/50"
+                      }`}
+                    >
+                      <Home size={18} className={pathname === "/" ? "text-primary-foreground" : "text-muted-foreground"} />
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">Home</TooltipContent>
+                </Tooltip>
               </motion.div>
             ) : (
               <motion.div
@@ -269,60 +309,85 @@ export function Sidebar() {
               transition={{ duration: 0.2 }}
               className="space-y-6 flex flex-col items-center pt-2"
             >
-              <Link
-                href="/chat"
-                className={`p-2 rounded-md transition-colors ${
-                  pathname === "/chat"
-                    ? "bg-primary"
-                    : "hover:bg-secondary/50"
-                }`}
-              >
-                <BotIcon size={18} className={pathname === "/chat" ? "text-primary-foreground" : "text-muted-foreground"} />
-              </Link>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link
+                    href="/chat"
+                    className={`p-2 rounded-md transition-colors ${
+                      pathname === "/chat"
+                        ? "bg-primary"
+                        : "hover:bg-secondary/50"
+                    }`}
+                  >
+                    <BotIcon size={18} className={pathname === "/chat" ? "text-primary-foreground" : "text-muted-foreground"} />
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="right">L2 Support Assistant</TooltipContent>
+              </Tooltip>
 
               {/* Admin-only icons in collapsed mode */}
               {role === "Admin" && (
                 <>
-                  <Link
-                    href="/data-ingestion"
-                    className={`p-2 rounded-md transition-colors ${
-                      pathname === "/data-ingestion"
-                        ? "bg-primary"
-                        : "hover:bg-secondary/50"
-                    }`}
-                  >
-                    <Database size={18} className={pathname === "/data-ingestion" ? "text-primary-foreground" : "text-muted-foreground"} />
-                  </Link>
-                  <Link
-                    href="/periodic-ingestion"
-                    className={`p-2 rounded-md transition-colors ${
-                      pathname === "/periodic-ingestion"
-                        ? "bg-primary"
-                        : "hover:bg-secondary/50"
-                    }`}
-                  >
-                    <Clock size={18} className={pathname === "/periodic-ingestion" ? "text-primary-foreground" : "text-muted-foreground"} />
-                  </Link>
-                  <Link
-                    href="/metrics-dashboard"
-                    className={`p-2 rounded-md transition-colors ${
-                      pathname === "/metrics-dashboard"
-                        ? "bg-primary"
-                        : "hover:bg-secondary/50"
-                    }`}
-                  >
-                    <BarChart size={18} className={pathname === "/metrics-dashboard" ? "text-primary-foreground" : "text-muted-foreground"} />
-                  </Link>
-                  <Link
-                    href="/annotations"
-                    className={`p-2 rounded-md transition-colors ${
-                      pathname === "/annotations"
-                        ? "bg-primary"
-                        : "hover:bg-secondary/50"
-                    }`}
-                  >
-                    <FileText size={18} className={pathname === "/annotations" ? "text-primary-foreground" : "text-muted-foreground"} />
-                  </Link>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Link
+                        href="/data-ingestion"
+                        className={`p-2 rounded-md transition-colors ${
+                          pathname === "/data-ingestion"
+                            ? "bg-primary"
+                            : "hover:bg-secondary/50"
+                        }`}
+                      >
+                        <Database size={18} className={pathname === "/data-ingestion" ? "text-primary-foreground" : "text-muted-foreground"} />
+                      </Link>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">Data Ingestion</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Link
+                        href="/periodic-ingestion"
+                        className={`p-2 rounded-md transition-colors ${
+                          pathname === "/periodic-ingestion"
+                            ? "bg-primary"
+                            : "hover:bg-secondary/50"
+                        }`}
+                      >
+                        <Clock size={18} className={pathname === "/periodic-ingestion" ? "text-primary-foreground" : "text-muted-foreground"} />
+                      </Link>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">Periodic Ingestion</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Link
+                        href="/metrics-dashboard"
+                        className={`p-2 rounded-md transition-colors ${
+                          pathname === "/metrics-dashboard"
+                            ? "bg-primary"
+                            : "hover:bg-secondary/50"
+                        }`}
+                      >
+                        <BarChart size={18} className={pathname === "/metrics-dashboard" ? "text-primary-foreground" : "text-muted-foreground"} />
+                      </Link>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">Metrics Dashboard</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Link
+                        href="/annotations"
+                        className={`p-2 rounded-md transition-colors ${
+                          pathname === "/annotations"
+                            ? "bg-primary"
+                            : "hover:bg-secondary/50"
+                        }`}
+                      >
+                        <FileText size={18} className={pathname === "/annotations" ? "text-primary-foreground" : "text-muted-foreground"} />
+                      </Link>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">Annotations</TooltipContent>
+                  </Tooltip>
                 </>
               )}
             </motion.div>

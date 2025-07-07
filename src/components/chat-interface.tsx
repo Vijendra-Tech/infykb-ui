@@ -1,199 +1,304 @@
 "use client";
-import { useState, useRef, useCallback, useEffect } from "react";
-import { useLayoutEffect } from "react";
+
+import { useState, useRef, useEffect } from "react";
+import ClientOnly from "./client-only";
+import { useClientOnly } from "@/utils/use-client-only";
+import { useSafeDate } from "@/utils/safe-hydration";
+import "@/styles/scrollbar.css";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Send, ChevronDown, MessageSquare, PenLine, ExternalLink } from "lucide-react";
+import { 
+  Sparkles, 
+  Send, 
+  ChevronDown, 
+  MessageSquare, 
+  Cpu,
+  Check,
+  Search,
+  FileText,
+  Database,
+  Terminal,
+  AlertCircle,
+  CheckCircle,
+  Clock,
+  HelpCircle,
+  Layers
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { AgentMode } from "./agent-mode";
+
+type Message = {
+  id?: string;
+  type: 'user' | 'system' | 'assistant';
+  content: string;
+  timestamp: Date;
+  category?: 'question' | 'error' | 'solution' | 'diagnostic';
+  severity?: 'low' | 'medium' | 'high' | 'critical';
+  status?: 'pending' | 'resolved' | 'escalated';
+};
 
 export function ChatInterface() {
+  // Use safe date formatting to prevent hydration errors
+  const { formatDate } = useSafeDate();
   const [inputValue, setInputValue] = useState("");
-  const [messages, setMessages] = useState<{type: 'user' | 'assistant', content: string}[]>([]);
-  const [selectedModel, setSelectedModel] = useState("Auto");
-  const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
-  const [activeButton, setActiveButton] = useState<'agent' | 'chat'>('agent');
+  // Use a static timestamp for SSR to prevent hydration errors
+  const staticTimestamp = new Date('2023-01-01T00:00:00Z');
   
-  // Sample customer data for Agent mode
-  const customerData = {
-    name: "Janet Deer",
-    id: "cus_28944",
-    orders: 8,
-    signupDate: "2023-11-28"
-  };
-  
-  // Sample chat messages for Agent mode
-  const customerMessages = [
-    { sender: 'agent', content: "Hi, I'm Blossom, your support representative. How can I help you today?" },
-    { sender: 'customer', content: "Hi, how can I cancel an order?" },
-    { sender: 'agent', content: "To cancel an order, you can do so directly through your account:\n\nLog into your account.\nGo to your order history.\nSelect \"Cancel Order\" for the relevant order.\nIf you have your order ID handy, I can process the cancellation for you!" },
-    { sender: 'customer', content: "Can you please help me cancel ORD1001?" }
-  ];
-  
-  const supportMessages = [
-    { sender: 'customer', content: "Hi, how can I cancel an order?" },
-    { sender: 'agent', content: "To cancel an order, you can do so directly through your account.\nLog into your account.\nGo to your order history.\nSelect \"Cancel Order\" for the relevant order.\nIf you have your order ID handy, I can process the cancellation for you!" },
-    { sender: 'customer', content: "Can you please help me cancel ORD1001?" },
-    { sender: 'suggestion', content: "Suggested cancel order" },
-    { sender: 'suggestion', content: "Called get order" },
-    { sender: 'agent', content: "I will proceed to cancel order ORD1001 for you. Please hold on a moment while I handle this." }
-  ];
-  
-  const models = [
-    { name: "Auto", description: "Dynamic cost" },
-    { name: "Flux Kontext [PRO]", description: null },
-    { name: "Flux Kontext [MAX]", description: null },
-    { name: "GPT", description: null },
-    { name: "GPT-HQ", description: null }
-  ];
-  
-  // State to control visibility of the chat box in Agent Mode
-  const [showAgentChatBox, setShowAgentChatBox] = useState(true);
-  const [expandedView, setExpandedView] = useState<'agent' | 'support' | 'balanced'>('balanced');
-  const [dividerPosition, setDividerPosition] = useState(33); // Percentage (0-100)
-  const [isDragging, setIsDragging] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  
-  // Handle mouse dragging for divider
-  const handleMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
-  };
-  
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (isDragging && containerRef.current) {
-      const containerRect = containerRef.current.getBoundingClientRect();
-      const containerWidth = containerRect.width;
-      const mouseX = e.clientX - containerRect.left;
-      
-      // Calculate percentage (constrain between 20% and 80%)
-      let newPosition = (mouseX / containerWidth) * 100;
-      newPosition = Math.max(20, Math.min(80, newPosition));
-      
-      // Round to nearest integer for better performance
-      newPosition = Math.round(newPosition);
-      
-      setDividerPosition(newPosition);
-      
-      // Update expanded view based on position
-      if (newPosition < 30) {
-        setExpandedView('support');
-      } else if (newPosition > 60) {
-        setExpandedView('agent');
-      } else {
-        setExpandedView('balanced');
-      }
-      
-      // Force a re-render by updating a class
-      document.documentElement.style.setProperty('--divider-position', `${newPosition}%`);
-      document.documentElement.style.setProperty('--divider-position-inverse', `${100 - newPosition}%`);
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: "welcome",
+      type: 'system',
+      content: 'Welcome to L2 Technical Support. How can I assist you today?',
+      timestamp: staticTimestamp,
+      category: 'question'
     }
-  }, [isDragging]);
+  ]);
   
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-  }, []);
-  
-  // Add and remove event listeners
+  // Update timestamps on client-side only
   useEffect(() => {
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-    } else {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    }
-    
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isDragging, handleMouseMove, handleMouseUp]);
+    // Client-side timestamp update no longer needed with useSafeDate
+  }, []);
+
+  const [selectedModel, setSelectedModel] = useState("Cascade");
+  const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
+  const [activeButton, setActiveButton] = useState('chat');
+  const [ticketInfo, setTicketInfo] = useState({
+    id: 'TKT-000000',
+    status: 'open',
+    priority: 'medium',
+    category: 'software'
+  });
   
-  // Update CSS variables when divider position changes
-  useLayoutEffect(() => {
-    document.documentElement.style.setProperty('--divider-position', `${dividerPosition}%`);
-    document.documentElement.style.setProperty('--divider-position-inverse', `${100 - dividerPosition}%`);
-  }, [dividerPosition]);
+  // Generate random ticket ID on client-side only
+  useEffect(() => {
+    setTicketInfo(prev => ({
+      ...prev,
+      id: 'TKT-' + Math.floor(100000 + Math.random() * 900000)
+    }));
+  }, []);
+  const [showKnowledgePanel, setShowKnowledgePanel] = useState(false);
+  const [relatedArticles, setRelatedArticles] = useState([
+    { id: 'KB001', title: 'Common Network Connectivity Issues', relevance: 0.85 },
+    { id: 'KB002', title: 'Database Connection Troubleshooting', relevance: 0.72 },
+    { id: 'KB003', title: 'System Performance Optimization', relevance: 0.68 }
+  ]);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // Scroll to bottom of messages when they change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, activeButton]);
+
+  // Close model dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsModelDropdownOpen(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleSendMessage = () => {
-    if (inputValue.trim()) {
-      // Add user message
-      setMessages([...messages, { type: 'user', content: inputValue }]);
+    if (!inputValue.trim()) return;
+    
+    // Add user message
+    const newMessages = [
+      ...messages,
+      { 
+        type: 'user' as const, 
+        content: inputValue,
+        timestamp: new Date(),
+        category: detectMessageCategory(inputValue)
+      },
+    ];
+    
+    setMessages(newMessages);
+    setInputValue("");
+    
+    // Update knowledge panel based on message content
+    if (inputValue.length > 10) {
+      setShowKnowledgePanel(true);
+      // In a real app, this would call an API to fetch relevant articles
+      setRelatedArticles([
+        { id: 'KB001', title: 'Common Network Connectivity Issues', relevance: 0.85 },
+        { id: 'KB002', title: 'Database Connection Troubleshooting', relevance: 0.72 },
+        { id: 'KB003', title: 'System Performance Optimization', relevance: 0.68 }
+      ]);
+    }
+    
+    // Simulate AI response after a short delay
+    setTimeout(() => {
+      const responseCategory = detectResponseCategory(inputValue);
+      const severity = detectSeverity(inputValue);
       
-      // If in Agent Mode, hide the chat box
-      if (activeButton === 'agent') {
-        setShowAgentChatBox(false);
-      }
-      
-      // Simulate assistant response after a delay
-      setTimeout(() => {
-        setMessages(prev => [...prev, { 
-          type: 'assistant', 
-          content: `This is a simulated response using ${selectedModel} model: "${inputValue}"` 
-        }]);
-      }, 1000);
-      
-      setInputValue("");
+      setMessages([
+        ...newMessages,
+        { 
+          type: 'assistant' as const, 
+          content: generateTechnicalResponse(inputValue, selectedModel),
+          timestamp: new Date(),
+          category: responseCategory,
+          severity: severity,
+          status: 'pending'
+        },
+      ]);
+    }, 1000);
+  };
+  
+  // Helper functions for L2 support features
+  const detectMessageCategory = (message: string): 'question' | 'error' | 'solution' | 'diagnostic' => {
+    if (message.includes('error') || message.includes('issue') || message.includes('problem')) {
+      return 'error';
+    } else if (message.includes('how') || message.includes('?')) {
+      return 'question';
+    } else if (message.includes('fix') || message.includes('solve')) {
+      return 'solution';
+    } else {
+      return 'diagnostic';
     }
   };
   
-  // Function to render message bubbles for chat
-  const renderMessage = (message: any, index: number, isCustomerView: boolean = false) => {
-    const isCustomer = message.sender === 'customer';
-    const isAgent = message.sender === 'agent';
-    const isSuggestion = message.sender === 'suggestion';
-    
-    if (isSuggestion) {
-      return (
-        <div key={`suggestion-${index}`} className="flex justify-end mb-2">
-          <button className="flex items-center text-sm text-blue-500 hover:text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-full">
-            <span className="mr-1">{message.content}</span>
-            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M9 5L16 12L9 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
-        </div>
-      );
-    }
-    
-    return (
-      <div key={`message-${index}`} className={`flex ${isCustomer ? 'justify-end' : 'justify-start'} mb-4`}>
-        <div className={`max-w-[80%] p-3 rounded-lg ${isCustomer ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-          <p className="whitespace-pre-line text-sm">{message.content}</p>
-        </div>
-      </div>
-    );
+  const detectResponseCategory = (message: string): 'question' | 'error' | 'solution' | 'diagnostic' => {
+    // In a real app, this would use NLP to determine the appropriate category
+    return 'solution';
   };
+  
+  const detectSeverity = (message: string): 'low' | 'medium' | 'high' | 'critical' => {
+    // In a real app, this would use NLP to determine severity
+    if (message.includes('urgent') || message.includes('critical')) {
+      return 'critical';
+    } else if (message.includes('important')) {
+      return 'high';
+    } else {
+      return 'medium';
+    }
+  };
+  
+  const generateTechnicalResponse = (message: string, model: string): string => {
+    // In a real app, this would call the AI model API
+    return `Based on your issue description, I recommend checking the following:\n\n1. Verify network connectivity\n2. Check system logs for errors\n3. Ensure all services are running properly\n\nWould you like me to guide you through any of these steps?`;
+  };
+  
+  // Available models for dropdown
+  const models = [
+    "Cascade",
+    "GPT-4",
+    "Claude 3",
+    "Technical Support Specialist",
+    "System Diagnostic"
+  ];
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full w-full bg-gradient-to-b from-background to-muted/20">
+      {/* Header with ticket info and model selector */}
+      <div className="flex items-center justify-between border-b border-border p-3 bg-muted/50 backdrop-blur-sm sticky top-0 z-10">
+        <div className="flex items-center gap-4">
+          
+          {/* Ticket information */}
+          <div className="flex items-center gap-2 bg-muted/70 px-3 py-1.5 rounded-md text-xs border border-border/50 shadow-sm">
+            <span className="font-medium">{ticketInfo.id}</span>
+            <span className="text-muted-foreground">|</span>
+            <div className="flex items-center gap-1">
+              <Clock className="h-3 w-3 text-muted-foreground" />
+              <span>Open</span>
+            </div>
+            <span className="text-muted-foreground">|</span>
+            <ClientOnly>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span className="font-medium">Ticket: {ticketInfo.id}</span>
+                <span className="px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 capitalize">{ticketInfo.status}</span>
+                <span className="px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 capitalize">{ticketInfo.priority}</span>
+              </div>
+            </ClientOnly>
+          </div>
+        </div>
+        
+        <div className="relative" ref={dropdownRef}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsModelDropdownOpen(!isModelDropdownOpen);
+            }}
+            className="flex items-center gap-1.5 text-xs bg-background/80 border-border/50 hover:bg-background shadow-sm"
+          >
+            <Sparkles className="h-3 w-3 text-primary mr-1" />
+            <span>{selectedModel}</span>
+            <ChevronDown className="h-3 w-3 ml-1 opacity-70" />
+          </Button>
+          
+          {isModelDropdownOpen && (
+            <div className="absolute right-0 top-full mt-1 w-56 rounded-md shadow-lg bg-white dark:bg-gray-800 border border-border z-10 overflow-hidden">
+              <div className="py-1">
+                {models.map((model) => (
+                  <button
+                    key={model}
+                    className={`w-full text-left px-4 py-2.5 text-sm hover:bg-muted flex items-center justify-between ${selectedModel === model ? 'bg-primary/5' : ''}`}
+                    onClick={() => {
+                      setSelectedModel(model);
+                      setIsModelDropdownOpen(false);
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Sparkles className={`h-4 w-4 ${selectedModel === model ? 'text-primary' : 'text-muted-foreground/70'}`} />
+                      <span>{model}</span>
+                    </div>
+                    {selectedModel === model && (
+                      <Check className="h-4 w-4 text-primary" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+      
+      {/* Main content area - conditionally render chat or agent mode */}
       {activeButton === 'chat' ? (
         // Regular Chat Interface
-        <div className="flex-1 overflow-auto">
-          <div className="flex flex-col justify-end min-h-full">
-            <AnimatePresence>
+        <div className="flex-1 w-full flex flex-col">
+          <div className="flex-1 scrollbar-custom scrollbar-always">
+            <div className="flex flex-col">
+              <AnimatePresence>
               {messages.length === 0 ? (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="flex flex-col items-center justify-center h-full p-8 text-center"
+                  className="flex flex-col items-center justify-center h-full p-8 text-center bg-gradient-to-b from-transparent to-muted/20"
                 >
-                  <div className="mb-4">
-                    <Sparkles className="h-12 w-12 text-muted-foreground" />
+                  <div className="mb-6 bg-primary/10 p-4 rounded-full">
+                    <Sparkles className="h-12 w-12 text-primary" />
                   </div>
                   <h2 className="text-2xl font-bold mb-2">How can I help you today?</h2>
                   <p className="text-muted-foreground mb-8 max-w-md">
                     Ask me anything or start with one of the suggestions below.
                   </p>
                   <div className="flex flex-wrap gap-2 justify-center">
-                    <Button variant="outline" onClick={() => setInputValue("Tell me about the latest features")}>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setInputValue("Tell me about the latest features")}
+                      className="bg-background/80 border-primary/20 hover:bg-background shadow-sm"
+                    >
                       Latest features
                     </Button>
-                    <Button variant="outline" onClick={() => setInputValue("How do I create a new project?")}>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setInputValue("How do I create a new project?")}
+                      className="bg-background/80 border-primary/20 hover:bg-background shadow-sm"
+                    >
                       Create a project
                     </Button>
-                    <Button variant="outline" onClick={() => setInputValue("What are the best practices?")}>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setInputValue("What are the best practices?")}
+                      className="bg-background/80 border-primary/20 hover:bg-background shadow-sm"
+                    >
                       Best practices
                     </Button>
                   </div>
@@ -209,10 +314,10 @@ export function ChatInterface() {
                       className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
                     >
                       <div
-                        className={`max-w-[80%] p-3 rounded-lg ${
+                        className={`max-w-[80%] p-3 rounded-lg shadow-sm ${
                           message.type === 'user'
                             ? 'bg-primary text-primary-foreground'
-                            : 'bg-muted'
+                            : 'bg-background border border-border/50'
                         }`}
                       >
                         <p className="whitespace-pre-line">{message.content}</p>
@@ -221,356 +326,232 @@ export function ChatInterface() {
                   ))}
                 </div>
               )}
-            </AnimatePresence>
-          </div>
-        </div>
-      ) : (
-        // Agent Mode Interface with Split View
-        <div className="flex-1 overflow-auto" ref={containerRef}>
-          <div className="flex flex-col md:flex-row h-auto md:h-8 border-b border-gray-200">
-            <div 
-              className={`w-full md:w-[var(--divider-position)] bg-rose-100 text-rose-800 flex items-center justify-center text-sm font-medium border-b md:border-b-0 md:border-r border-gray-200 py-2 md:py-0 relative transition-all duration-300`}
-              onClick={() => {
-                if (expandedView === 'agent') {
-                  setExpandedView('balanced');
-                  setDividerPosition(33);
-                } else {
-                  setExpandedView('agent');
-                  setDividerPosition(66);
-                }
-              }}
-            >
-              <span>AI Agent View</span>
-              <button className="absolute right-2 text-rose-600 hidden md:block">
-                {expandedView === 'agent' ? (
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="15 18 9 12 15 6"></polyline>
-                  </svg>
-                ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="9 18 15 12 9 6"></polyline>
-                  </svg>
-                )}
-              </button>
-            </div>
-            <div 
-              className={`w-full md:w-[var(--divider-position-inverse)] bg-blue-100 text-blue-800 flex items-center justify-center text-sm font-medium py-2 md:py-0 relative transition-all duration-300`}
-              onClick={() => {
-                if (expandedView === 'support') {
-                  setExpandedView('balanced');
-                  setDividerPosition(33);
-                } else {
-                  setExpandedView('support');
-                  setDividerPosition(25);
-                }
-              }}
-            >
-              <span>Support Representative View</span>
-              <button className="absolute left-2 text-blue-600 hidden md:block">
-                {expandedView === 'support' ? (
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="9 18 15 12 9 6"></polyline>
-                  </svg>
-                ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="15 18 9 12 15 6"></polyline>
-                  </svg>
-                )}
-              </button>
+              </AnimatePresence>
+              <div ref={messagesEndRef} />
             </div>
           </div>
           
-          <div className="flex flex-col md:flex-row h-auto md:h-[calc(100%-32px)] relative">
-            {/* Resizable divider handle - only visible on desktop */}
-            <div 
-              className={`absolute top-1/2 transform -translate-y-1/2 hidden md:flex flex-col items-center justify-center z-10 ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
-              style={{
-                left: `var(--divider-position)`,
-                transition: isDragging ? 'none' : 'left 0.3s ease'
-              }}
-              onMouseDown={handleMouseDown}
-            >
-              <div 
-                className={`w-1 h-16 ${isDragging ? 'bg-blue-500' : 'bg-gray-300 hover:bg-gray-400'} rounded-full cursor-col-resize`}
-              ></div>
-            </div>
-            {/* AI Agent View */}
-            <div 
-              className={`w-full md:w-[var(--divider-position)] border-b md:border-b-0 md:border-r border-gray-200 flex flex-col transition-all duration-300`}
-            >
-              <div className="p-4 bg-gray-50 border-b border-gray-200">
-                <div className="text-sm text-gray-600">
-                  <p className="font-medium">Hi, I'm Blossom, your support representative.</p>
-                  <p>How can I help you today?</p>
-                </div>
-              </div>
-              
-              <div className="flex-1 overflow-auto p-4">
-                <div className="space-y-4">
-                  {customerMessages.map((message, index) => renderMessage(message, index, true))}
-                </div>
-              </div>
-              
-              {showAgentChatBox && (
-                <div className="p-4 border-t border-gray-200">
-                  <div className="relative">
-                    <textarea 
-                      className="w-full rounded-lg border border-gray-300 p-3 pr-10 resize-none focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" 
-                      placeholder="Message..." 
-                      rows={1}
-                      value={inputValue}
-                      onChange={(e) => setInputValue(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && !e.shiftKey) {
-                          e.preventDefault();
-                          handleSendMessage();
-                        }
-                      }}
-                    />
-                    <button 
-                      className="absolute right-3 bottom-3 text-gray-500 hover:text-gray-700"
-                      onClick={handleSendMessage}
-                    >
-                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-            
-            {/* Support Representative View */}
-            <div 
-              className={`w-full md:w-[var(--divider-position-inverse)] flex flex-col md:flex-row transition-all duration-300`}
-            >
-              <div className="flex-1 flex flex-col md:border-r border-gray-200">
-                <div className="p-4 bg-gray-50 border-b border-gray-200">
-                  <div className="text-sm">
-                    <p>Hi, I'm Blossom, your support representative. How can I help you today?</p>
-                  </div>
-                </div>
-                
-                <div className="flex-1 overflow-auto p-4">
-                  <div className="space-y-4">
-                    {supportMessages.map((message, index) => renderMessage(message, index))}
-                  </div>
-                </div>
-                
-                {showAgentChatBox && (
-                  <div className="p-4 border-t border-gray-200">
-                    <div className="flex items-center gap-2 mb-2">
-                      <button 
-                        className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-full text-xs font-medium"
-                        onClick={handleSendMessage}
-                      >
-                        Send now
-                      </button>
-                      <button className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-full text-xs font-medium">Edit</button>
-                    </div>
-                    <div className="relative">
-                      <textarea 
-                        className="w-full rounded-lg border border-gray-300 p-3 pr-10 resize-none focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" 
-                        placeholder="Message..." 
-                        rows={1}
-                        value={inputValue}
-                        onChange={(e) => setInputValue(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && !e.shiftKey) {
-                            e.preventDefault();
-                            handleSendMessage();
-                          }
-                        }}
-                      />
-                      <button 
-                        className="absolute right-3 bottom-3 text-gray-500 hover:text-gray-700"
-                        onClick={handleSendMessage}
-                      >
-                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              {/* Customer Details Panel */}
-              <div className="w-full md:w-96 bg-white md:border-l border-gray-200 p-4 overflow-auto border-t md:border-t-0 mt-4 md:mt-0">
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="text-sm font-medium mb-2">Customer details</h3>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Name</span>
-                        <span>{customerData.name}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">ID</span>
-                        <span>{customerData.id}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-500"># Orders</span>
-                        <span>{customerData.orders}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Signup Date</span>
-                        <span>{customerData.signupDate}</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <h3 className="text-sm font-medium mb-2">Recommended actions</h3>
-                    <div className="flex gap-2">
-                      <button className="px-3 py-1 bg-gray-800 text-white text-xs rounded-md">Create ticket</button>
-                      <button className="px-3 py-1 border border-gray-300 text-xs rounded-md">Cancel order</button>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <h3 className="text-sm font-medium mb-2">Relevant articles</h3>
-                    <div className="space-y-3">
-                      <div>
-                        <div className="flex items-center justify-between">
-                          <h4 className="text-xs font-medium">Order Cancellation</h4>
-                          <span className="text-xs bg-rose-100 text-rose-800 px-1.5 py-0.5 rounded">PUBLIC FAQ</span>
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">If you've changed your mind or made an error with your order, you have up to 1 hour from the time of purchase to cancel directly through your account...</p>
-                      </div>
-                      
-                      <div>
-                        <div className="flex items-center justify-between">
-                          <h4 className="text-xs font-medium">Order Cancellation</h4>
-                          <span className="text-xs bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">INTERNAL</span>
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">Orders can be cancelled if the request is received: - Within 1 hour of purchase. - Before the order status is marked as "Prepared"...</p>
-                      </div>
-                      
-                      <div>
-                        <div className="flex items-center justify-between">
-                          <h4 className="text-xs font-medium">Returns Policy</h4>
-                          <span className="text-xs bg-rose-100 text-rose-800 px-1.5 py-0.5 rounded">PUBLIC FAQ</span>
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">We strive to ensure customer satisfaction. If you're not fully satisfied with your purchase, we offer a 30-day return policy from the date of receipt...</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+          <div className="p-4 border-t border-border bg-muted/20 backdrop-blur-sm sticky bottom-0">
+            <div className="relative w-full max-w-5xl mx-auto">
+              <textarea 
+                className="w-full rounded-lg border border-input bg-background/80 px-4 py-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:cursor-not-allowed disabled:opacity-50 resize-none min-h-[80px] shadow-sm" 
+                placeholder="Type a message..." 
+                rows={3}
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage();
+                  }
+                }}
+              />
+              <Button 
+                className="absolute bottom-3 right-3 shadow-sm"
+                size="sm"
+                onClick={handleSendMessage}
+                disabled={!inputValue.trim()}
+              >
+                <Send className="h-4 w-4 mr-1" />
+                Send
+              </Button>
             </div>
           </div>
         </div>
-      )}
-      
-      {/* Input area - fixed at bottom */}
-      <motion.div 
-        className="border-t p-2 md:p-4 bg-background dark:bg-gray-900"
-        initial={{ y: 20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.3, duration: 0.5 }}
-      >
-        <div className="w-full max-w-4xl mx-auto">
-          <div className="relative">
-            <div className="p-2 md:px-4">
-              <div className="flex items-center">
-                <div className="flex w-full flex-col md:flex-row items-center pb-4 md:pb-1">
-                  <motion.div 
-                    className="flex w-full flex-col gap-1.5 rounded-2xl p-2.5 pl-1.5 bg-background dark:bg-gray-800 border border-input dark:border-gray-700 shadow-sm transition-colors"
-                    whileHover={{ boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)" }}
-                    animate={{ boxShadow: inputValue ? "0 2px 8px rgba(0, 0, 0, 0.08)" : "none" }}
+      ) : (
+        // L2 Technical Support Interface
+        <div className="flex h-full w-full">
+          {/* Main chat area */}
+          <div className="flex-1 flex flex-col h-full">
+            {/* Messages area */}
+            <div className="flex-1 flex flex-col">
+              <div className="flex-1 scrollbar-custom scrollbar-always p-4 space-y-4">
+                {messages.map((message, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
-                    {/* Model selector and action buttons */}
-                    <div className="flex flex-wrap justify-between items-center px-2 md:px-4 py-1">
-                      <div className="flex items-center gap-2">
-                        <Button 
-                          variant={activeButton === 'agent' ? "default" : "ghost"} 
-                          size="sm" 
-                          className={`flex items-center gap-1 text-xs font-medium ${activeButton === 'agent' ? 'text-foreground dark:text-white' : 'text-muted-foreground hover:text-foreground dark:text-gray-400 dark:hover:text-white'}`}
-                          onClick={() => setActiveButton('agent')}
-                        >
-                          <PenLine className="h-3 w-3" />
-                          Agent
-                        </Button>
-                        <Button 
-                          variant={activeButton === 'chat' ? "default" : "ghost"} 
-                          size="sm" 
-                          className={`flex items-center gap-1 text-xs font-medium ${activeButton === 'chat' ? 'text-foreground dark:text-white' : 'text-muted-foreground hover:text-foreground dark:text-gray-400 dark:hover:text-white'}`}
-                          onClick={() => setActiveButton('chat')}
-                        >
-                          <MessageSquare className="h-3 w-3" />
-                          Chat
-                        </Button>
-                      </div>
-                      <div className="relative">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground dark:text-gray-400 dark:hover:text-white"
-                          onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
-                        >
-                          {selectedModel}
-                          <ChevronDown className="h-3 w-3" />
-                        </Button>
-                        
-                        {isModelDropdownOpen && (
-                          <div className="absolute right-0 bottom-full mb-1 w-48 rounded-md bg-background dark:bg-gray-800 shadow-lg border border-border dark:border-gray-700 z-50">
-                            <div className="py-1">
-                              {models.map((model) => (
-                                <button
-                                  key={model.name}
-                                  className="flex items-center justify-between w-full px-3 py-1.5 text-sm text-left hover:bg-muted dark:hover:bg-gray-700"
-                                  onClick={() => {
-                                    setSelectedModel(model.name);
-                                    setIsModelDropdownOpen(false);
-                                  }}
-                                >
-                                  <span>{model.name}</span>
-                                  {model.description && (
-                                    <span className="text-muted-foreground dark:text-gray-400 text-xs">{model.description}</span>
-                                  )}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    
-                    {/* Text input area */}
-                    <div className="flex items-end gap-2 px-4 pb-3">
-                      <textarea
-                        className="flex-1 resize-none bg-transparent border-0 outline-none focus:ring-0 p-0 placeholder:text-muted-foreground text-base h-[24px] max-h-[200px] overflow-y-auto"
-                        placeholder="Type a message..."
-                        value={inputValue}
-                        onChange={(e) => setInputValue(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && !e.shiftKey) {
-                            e.preventDefault();
-                            handleSendMessage();
-                          }
-                        }}
-                        rows={1}
-                        style={{ height: "auto" }}
-                      />
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8 rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
-                        onClick={handleSendMessage}
-                        disabled={!inputValue.trim()}
-                      >
-                        <Send className="h-4 w-4" />
-                        <span className="sr-only">Send</span>
-                      </Button>
+                    <div
+                      className={`max-w-[80%] p-3 rounded-lg shadow-sm ${
+                        message.type === 'user'
+                          ? 'bg-primary text-primary-foreground'
+                          : message.type === 'system'
+                          ? 'bg-muted/30 border border-border/50'
+                          : 'bg-background border border-border/50'
+                      } ${
+                        message.severity === 'critical' ? 'border-l-4 border-l-red-500' :
+                        message.severity === 'high' ? 'border-l-4 border-l-amber-500' : ''
+                      }`}
+                    >
+                      {message.type !== 'user' && message.category && (
+                        <div className="flex items-center gap-2 mb-1 text-xs text-muted-foreground">
+                          {message.category === 'error' && <AlertCircle className="h-3 w-3 text-red-500" />}
+                          {message.category === 'solution' && <CheckCircle className="h-3 w-3 text-green-500" />}
+                          {message.category === 'diagnostic' && <Terminal className="h-3 w-3 text-blue-500" />}
+                          {message.category === 'question' && <HelpCircle className="h-3 w-3 text-amber-500" />}
+                          <span className="capitalize">{message.category}</span>
+                          {message.status && (
+                            <>
+                              <span className="text-muted-foreground">•</span>
+                              <span className="capitalize">{message.status}</span>
+                            </>
+                          )}
+                        </div>
+                      )}
+                      <p className="whitespace-pre-line">{message.content}</p>
+                      {message.timestamp && (
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {formatDate(message.timestamp, { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      )}
                     </div>
                   </motion.div>
+                ))}
+              </div>
+              <div ref={messagesEndRef} />
+            </div>
+            
+            {/* Input area */}
+            <div className="p-4 border-t border-border bg-muted/20 backdrop-blur-sm sticky bottom-0">
+              <div className="flex gap-2 w-full max-w-5xl mx-auto">
+                <div className="flex gap-2 bg-muted/30 p-0.5 rounded-lg self-end">
+                  <Button
+                    variant={activeButton === 'chat' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setActiveButton('chat')}
+                    className={`flex items-center gap-1.5 ${activeButton === 'chat' ? 'shadow-sm' : ''}`}
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    <span>Chat</span>
+                  </Button>
+                  <Button
+                    variant={activeButton === 'agent' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setActiveButton('agent')}
+                    className={`flex items-center gap-1.5 ${activeButton === 'agent' ? 'shadow-sm' : ''}`}
+                  >
+                    <Cpu className="h-4 w-4" />
+                    <span>L2 Support</span>
+                  </Button>
+                </div>
+                <div className="relative flex-1">
+                  <textarea 
+                    className="w-full rounded-lg border border-input bg-background/80 px-4 py-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:cursor-not-allowed disabled:opacity-50 resize-none min-h-[80px] shadow-sm" 
+                    placeholder="Describe the technical issue in detail..." 
+                    rows={3}
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
+                    }}
+                  />
+                  <div className="absolute bottom-3 right-3 flex gap-2">
+                    <Button 
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setShowKnowledgePanel(!showKnowledgePanel)}
+                      className="flex items-center gap-1"
+                    >
+                      <Search className="h-3 w-3" />
+                      <span>KB</span>
+                    </Button>
+                    <Button 
+                      size="sm"
+                      onClick={handleSendMessage}
+                      disabled={!inputValue.trim()}
+                      className="flex items-center gap-1"
+                    >
+                      <Send className="h-3 w-3" />
+                      <span>Send</span>
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
+          
+          {/* Knowledge base panel - redesigned without border */}
+          {showKnowledgePanel && (
+            <div className="w-80 bg-background/80 flex flex-col h-full shadow-sm">
+              {/* KB Header with model selector */}
+              <div className="p-3 bg-muted/30 backdrop-blur-sm">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-medium">Knowledge Base</h3>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => setShowKnowledgePanel(false)}
+                    className="h-6 w-6 p-0"
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </div>
+                
+                <div className="relative">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <input 
+                    type="text" 
+                    placeholder="Search knowledge base..."
+                    className="w-full pl-8 pr-3 py-2 text-sm rounded-md bg-background border border-input/50" 
+                  />
+                </div>
+              </div>
+              
+              {/* KB Content */}
+              <div className="flex-1 overflow-auto scrollbar-custom p-3">
+                <h4 className="text-xs font-medium mb-2 text-muted-foreground">Related Articles</h4>
+                <div className="space-y-2">
+                  {relatedArticles.map(article => (
+                    <div 
+                      key={article.id} 
+                      className="p-3 rounded-md hover:bg-muted/20 cursor-pointer bg-background shadow-sm transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm font-medium">{article.title}</span>
+                      </div>
+                      <div className="mt-1 flex items-center gap-2">
+                        <div className="text-xs text-muted-foreground">{article.id}</div>
+                        <div className="text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-1.5 py-0.5 rounded-full">
+                          {Math.round(article.relevance * 100)}% match
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                <h4 className="text-xs font-medium mb-2 mt-4 text-muted-foreground">Diagnostic Tools</h4>
+                <div className="space-y-2">
+                  <Button variant="outline" size="sm" className="w-full justify-start bg-background hover:bg-muted/10 shadow-sm">
+                    <div className="flex items-center justify-center bg-blue-100 dark:bg-blue-900/30 p-1 rounded-md mr-2">
+                      <Terminal className="h-3.5 w-3.5 text-blue-500" />
+                    </div>
+                    <span>Run System Diagnostics</span>
+                  </Button>
+                  <Button variant="outline" size="sm" className="w-full justify-start bg-background hover:bg-muted/10 shadow-sm">
+                    <div className="flex items-center justify-center bg-amber-100 dark:bg-amber-900/30 p-1 rounded-md mr-2">
+                      <Database className="h-3.5 w-3.5 text-amber-500" />
+                    </div>
+                    <span>Check Database Status</span>
+                  </Button>
+                  <Button variant="outline" size="sm" className="w-full justify-start bg-background hover:bg-muted/10 shadow-sm">
+                    <div className="flex items-center justify-center bg-green-100 dark:bg-green-900/30 p-1 rounded-md mr-2">
+                      <Layers className="h-3.5 w-3.5 text-green-500" />
+                    </div>
+                    <span>View System Logs</span>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-      </motion.div>
+      )}
     </div>
   );
 }
