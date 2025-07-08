@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { IngestionTrackingModal } from "./ingestion-tracking-modal";
 import { useDataIngestionStore, type IngestionSourceType, type IngestionSource } from "@/store/use-data-ingestion-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +15,9 @@ import { formatDistanceToNow } from "date-fns";
 
 export function DataIngestion() {
   // Access the data ingestion store
-  const { sources, addSource, editSource, startIngestion, completeIngestion, deleteSource } = useDataIngestionStore();
+  const { sources, addSource, editSource, startIngestion, completeIngestion, failIngestion, deleteSource } = useDataIngestionStore();
+  const [trackingSourceId, setTrackingSourceId] = useState<string | null>(null);
+  const [isTrackingModalOpen, setIsTrackingModalOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingSource, setEditingSource] = useState<IngestionSource | null>(null);
@@ -59,24 +62,85 @@ export function DataIngestion() {
       return;
     }
 
+    // File validation for File Upload type
+    if (newSourceType === "File Upload") {
+      if (!selectedFile) {
+        setFileError("Please select a file to upload");
+        return;
+      }
+      
+      // Check file size (max 50MB)
+      const maxSize = 50 * 1024 * 1024; // 50MB in bytes
+      if (selectedFile.size > maxSize) {
+        setFileError(`File size exceeds the maximum limit of 50MB. Your file is ${(selectedFile.size / (1024 * 1024)).toFixed(2)}MB`);
+        return;
+      }
+      
+      // Check file type for unsupported formats
+      const unsupportedTypes = [".exe", ".dll", ".bat", ".sh"];
+      const fileName = selectedFile.name.toLowerCase();
+      if (unsupportedTypes.some(ext => fileName.endsWith(ext))) {
+        setFileError(`File type not supported. Please upload a document file.`);
+        return;
+      }
+    }
+
     setIsSubmitting(true);
 
     // Simulate API call
     setTimeout(() => {
       try {
-        addSource({
+        // Simulate random failure for file uploads (20% chance)
+        if (newSourceType === "File Upload" && Math.random() < 0.2) {
+          throw new Error("File format validation failed. The file appears to be corrupted or in an unsupported format.");
+        }
+        
+        // Create the source object
+        const sourceData = {
           name: newSourceName.trim(),
           type: newSourceType,
           ...(sourceUrl ? { url: sourceUrl } : {}),
           ...(sourceUsername ? { username: sourceUsername } : {}),
           ...(sourcePassword ? { password: sourcePassword } : {}),
-        });
+        };
+        
+        // Add the source and get the generated ID
+        const newSourceId = addSource(sourceData);
+        
+        // If it's a file upload and we have a file, simulate starting the ingestion automatically
+        if (newSourceType === "File Upload" && selectedFile) {
+          startIngestion(newSourceId);
+          
+          // Simulate processing
+          setTimeout(() => {
+            // 80% chance of success
+            if (Math.random() > 0.2) {
+              const recordCount = Math.floor(Math.random() * 1000) + 100;
+              completeIngestion(newSourceId, recordCount, {
+                totalDocuments: recordCount,
+                processedDocuments: recordCount - Math.floor(Math.random() * 5),
+                failedDocuments: Math.floor(Math.random() * 5)
+              });
+            } else {
+              // Specific file upload failure cases
+              const errorCases = [
+                { message: "Invalid document structure. The file contains malformed content.", code: "DOC_STRUCTURE_ERROR" },
+                { message: "Unsupported encoding detected. Please ensure the file uses UTF-8 encoding.", code: "ENCODING_ERROR" },
+                { message: "Document parsing failed. The file may be password-protected or encrypted.", code: "PARSING_ERROR" },
+                { message: "File contains no extractable text content.", code: "NO_CONTENT_ERROR" }
+              ];
+              
+              const randomError = errorCases[Math.floor(Math.random() * errorCases.length)];
+              failIngestion(newSourceId, randomError.message, randomError.code);
+            }
+          }, 3000);
+        }
 
         // Close dialog and reset form
         handleDialogChange(false);
         setIsSubmitting(false);
       } catch (error) {
-        setError("Failed to add source. Please try again.");
+        setError(error instanceof Error ? error.message : "Failed to add source. Please try again.");
         setIsSubmitting(false);
       }
     }, 1000);
@@ -165,11 +229,27 @@ export function DataIngestion() {
     // Simulate ingestion completion after 3 seconds
     setTimeout(() => {
       try {
-        const recordCount = Math.floor(Math.random() * 1000) + 100;
-        completeIngestion(id, recordCount);
+        // Randomly succeed or fail (80% success rate)
+        const isSuccess = Math.random() > 0.2;
+        
+        if (isSuccess) {
+          const recordCount = Math.floor(Math.random() * 1000) + 100;
+          const processedDocs = recordCount - Math.floor(Math.random() * 10); // Some may fail
+          const failedDocs = recordCount - processedDocs;
+          
+          completeIngestion(id, recordCount, {
+            totalDocuments: recordCount,
+            processedDocuments: processedDocs,
+            failedDocuments: failedDocs
+          });
+        } else {
+          failIngestion(id, "Failed to process some documents due to formatting issues", "FORMAT_ERROR");
+        }
+        
         setProcessingSourceId(null);
       } catch (err) {
         setError("An error occurred during ingestion. Please try again.");
+        failIngestion(id, "Unexpected error during processing", "SYSTEM_ERROR");
         setProcessingSourceId(null);
       }
     }, 3000);
@@ -532,11 +612,25 @@ export function DataIngestion() {
                     <TableCell className="text-right">{source.recordCount ?? "-"}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        {source.status === "Ready" || source.status === "Completed" ? (
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="h-8 px-2 text-gray-600"
+                          onClick={() => {
+                            setTrackingSourceId(source.id);
+                            setIsTrackingModalOpen(true);
+                          }}
+                        >
+                          <FileText className="h-4 w-4 mr-1" />
+                          Details
+                        </Button>
+                        
+                        {source.status === "Ready" || source.status === "Completed" || source.status === "Failed" ? (
                           <Button 
                             size="sm" 
                             variant="outline" 
-                            className={`h-8 px-2 ${processingSourceId === source.id ? "bg-blue-50" : ""} text-blue-600`}
+                            className={`h-8 px-2 ${processingSourceId === source.id ? "bg-blue-50" : ""} 
+                              ${source.status === "Failed" ? "text-orange-600" : "text-blue-600"}`}
                             onClick={() => handleStartIngestion(source.id)}
                             disabled={processingSourceId !== null}
                           >
@@ -544,11 +638,14 @@ export function DataIngestion() {
                               <RefreshCw className="h-4 w-4 mr-1 animate-spin" />
                             ) : source.status === "Completed" ? (
                               <RefreshCw className="h-4 w-4 mr-1" />
+                            ) : source.status === "Failed" ? (
+                              <RefreshCw className="h-4 w-4 mr-1" />
                             ) : (
                               <Play className="h-4 w-4 mr-1" />
                             )}
                             {processingSourceId === source.id ? "Processing..." : 
-                              source.status === "Completed" ? "Re-ingest" : "Start Ingestion"}
+                              source.status === "Completed" ? "Re-ingest" : 
+                              source.status === "Failed" ? "Retry" : "Start Ingestion"}
                           </Button>
                         ) : source.status === "Processing" ? (
                           <Button 
@@ -588,6 +685,13 @@ export function DataIngestion() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Ingestion Tracking Modal */}
+      <IngestionTrackingModal
+        isOpen={isTrackingModalOpen}
+        onOpenChange={setIsTrackingModalOpen}
+        sourceId={trackingSourceId}
+      />
     </div>
   );
 }

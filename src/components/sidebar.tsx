@@ -5,14 +5,17 @@ import { useRoleStore } from "@/store/use-role-store";
 import { useChatHistoryStore } from "@/store/use-chat-history-store";
 import { useDataIngestionStore } from "@/store/use-data-ingestion-store";
 import {
-  Home,
-  Pencil,
-  Menu,
-  BotIcon,
-  Database,
-  Clock,
   BarChart,
+  BotIcon,
+  Clock,
+  Database,
   FileText,
+  Home,
+  Menu,
+  Pencil,
+  Settings,
+  Share2,
+  Users,
   X,
 } from "lucide-react";
 import Link from "next/link";
@@ -296,6 +299,14 @@ export function Sidebar() {
                     label="Annotations"
                     active={pathname === "/annotations"}
                     href="/annotations"
+                  />
+                  <SidebarItem
+                    icon={
+                      <Share2 size={18} className={pathname === "/relationship-graph" ? "text-primary-foreground" : "text-muted-foreground"} />
+                    }
+                    label="Relationship Graph"
+                    active={pathname === "/relationship-graph"}
+                    href="/relationship-graph"
                   />
                 </SidebarSection>
               )}
