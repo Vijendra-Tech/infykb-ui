@@ -4,6 +4,7 @@ import { useSidebar } from "@/context/sidebar-context";
 import { useRoleStore } from "@/store/use-role-store";
 import { useChatHistoryStore } from "@/store/use-chat-history-store";
 import { useDataIngestionStore } from "@/store/use-data-ingestion-store";
+import { ChatHistory } from "@/components/chat-history";
 import {
   BarChart,
   BotIcon,
@@ -46,12 +47,12 @@ const SidebarItem = ({ icon, label, active, badge, href = "#" }: SidebarItemProp
         href={href}
         className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${
           active 
-            ? "bg-primary text-primary-foreground" 
+            ? "bg-orange-100 text-orange-800" 
             : "hover:bg-secondary/50"
         }`}
       >
-        <div className={active ? "text-primary-foreground" : "text-muted-foreground"}>{icon}</div>
-        <span className={`flex-1 ${active ? "font-medium" : ""}`}>{label}</span>
+        <div className={active ? "text-orange-800" : "text-muted-foreground"}>{icon}</div>
+        <span className={`flex-1 ${active ? "font-medium text-orange-800" : ""}`}>{label}</span>
         {badge && (
           <span className="px-1.5 py-0.5 text-xs bg-white/20 text-white rounded-md">
             {badge}
@@ -67,11 +68,11 @@ const SidebarItem = ({ icon, label, active, badge, href = "#" }: SidebarItemProp
             href={href}
             className={`flex justify-center items-center p-2 rounded-md transition-colors ${
               active 
-                ? "bg-primary text-primary-foreground" 
+                ? "bg-orange-100 text-orange-800" 
                 : "hover:bg-secondary/50"
             }`}
           >
-            <div className={active ? "text-primary-foreground" : "text-muted-foreground"}>{icon}</div>
+            <div className={active ? "text-orange-800" : "text-muted-foreground"}>{icon}</div>
           </Link>
         </TooltipTrigger>
         <TooltipContent side="right">
@@ -127,8 +128,9 @@ const SidebarSection = ({
 export function Sidebar() {
   const { collapsed, setCollapsed } = useSidebar();
   const { role } = useRoleStore();
-  const router = useRouter();
   const pathname = usePathname();
+  const router = useRouter();
+  const [isChatHistoryOpen, setIsChatHistoryOpen] = useState(false);
 
   return (
     <motion.div
@@ -233,44 +235,38 @@ export function Sidebar() {
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.2, delay: 0.1 }}
             >
-              <SidebarSection title="AI Agents">
-                <SidebarItem
-                  icon={
-                    <BotIcon size={18} className="text-muted-foreground" />
-                  }
-                  label="L2 Support Assistant"
-                  active={false}
+              <div className="space-y-2 px-3 py-2">
+                <Link
                   href="/chat"
-                />
-                <div className="ml-6 mt-1">
-                  <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    className="relative"
-                  >
-
-                    <Link
-                      href="/chat"
-                      onClick={() => {
-                        const { addChat } = useChatHistoryStore.getState();
-                        addChat({ title: "New Chat" });
-                      }}
-                      className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${pathname === "/chat" ? "bg-primary text-primary-foreground" : "bg-secondary/30 hover:bg-secondary/50"} border border-primary/10`}
-                    >
-                      <div className={pathname === "/chat" ? "text-primary-foreground" : "text-primary"}>
-                        <Pencil size={16} />
-                      </div>
-                      <span className="flex-1 font-medium text-sm">New Chat</span>
-                    </Link>
-                  </motion.div>
-                </div>
-              </SidebarSection>
+                  onClick={() => {
+                    const { addChat } = useChatHistoryStore.getState();
+                    addChat({ title: "New Chat" });
+                  }}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${pathname === "/chat" && !pathname.includes("?id=") ? "bg-orange-100 text-orange-800" : "bg-secondary/30 hover:bg-secondary/50"} border border-primary/10`}
+                >
+                  <div className={pathname === "/chat" && !pathname.includes("?id=") ? "text-orange-800" : "text-primary"}>
+                    <Pencil size={16} />
+                  </div>
+                  <span className="flex-1 font-medium text-sm">New Chat</span>
+                </Link>
+                
+                <button
+                  onClick={() => setIsChatHistoryOpen(true)}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors w-full hover:bg-secondary/50 cursor-pointer`}
+                >
+                  <div className="text-muted-foreground">
+                    <Clock size={16} />
+                  </div>
+                  <span className="flex-1 font-medium text-sm text-left">Chats</span>
+                </button>
+              </div>
 
               {/* Admin-only sections */}
               {role === "Admin" && (
                 <SidebarSection title="Administration">
                   <SidebarItem
                     icon={
-                      <Database size={18} className={pathname === "/data-ingestion" ? "text-primary-foreground" : "text-muted-foreground"} />
+                      <Database size={18} className={pathname === "/data-ingestion" ? "text-orange-800" : "text-muted-foreground"}/>
                     }
                     label="Data Ingestion"
                     active={pathname === "/data-ingestion"}
@@ -324,16 +320,32 @@ export function Sidebar() {
                 <TooltipTrigger asChild>
                   <Link
                     href="/chat"
+                    onClick={() => {
+                      const { addChat } = useChatHistoryStore.getState();
+                      addChat({ title: "New Chat" });
+                    }}
                     className={`p-2 rounded-md transition-colors ${
-                      pathname === "/chat"
-                        ? "bg-primary"
+                      pathname === "/chat" && !pathname.includes("?id=")
+                        ? "bg-orange-100"
                         : "hover:bg-secondary/50"
                     }`}
                   >
-                    <BotIcon size={18} className={pathname === "/chat" ? "text-primary-foreground" : "text-muted-foreground"} />
+                    <Pencil size={16} className={pathname === "/chat" && !pathname.includes("?id=") ? "text-orange-800" : "text-muted-foreground"} />
                   </Link>
                 </TooltipTrigger>
-                <TooltipContent side="right">L2 Support Assistant</TooltipContent>
+                <TooltipContent side="right">New Chat</TooltipContent>
+              </Tooltip>
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => setIsChatHistoryOpen(true)}
+                    className="p-2 rounded-md transition-colors hover:bg-secondary/50 cursor-pointer"
+                  >
+                    <Clock size={16} className="text-muted-foreground" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right">Chats</TooltipContent>
               </Tooltip>
 
               {/* Admin-only icons in collapsed mode */}
@@ -345,11 +357,11 @@ export function Sidebar() {
                         href="/data-ingestion"
                         className={`p-2 rounded-md transition-colors ${
                           pathname === "/data-ingestion"
-                            ? "bg-primary"
+                            ? "bg-orange-100"
                             : "hover:bg-secondary/50"
                         }`}
                       >
-                        <Database size={18} className={pathname === "/data-ingestion" ? "text-primary-foreground" : "text-muted-foreground"} />
+                        <Database size={18} className={pathname === "/data-ingestion" ? "text-orange-800" : "text-muted-foreground"} />
                       </Link>
                     </TooltipTrigger>
                     <TooltipContent side="right">Data Ingestion</TooltipContent>
@@ -360,11 +372,11 @@ export function Sidebar() {
                         href="/periodic-ingestion"
                         className={`p-2 rounded-md transition-colors ${
                           pathname === "/periodic-ingestion"
-                            ? "bg-primary"
+                            ? "bg-orange-100"
                             : "hover:bg-secondary/50"
                         }`}
                       >
-                        <Clock size={18} className={pathname === "/periodic-ingestion" ? "text-primary-foreground" : "text-muted-foreground"} />
+                        <Clock size={18} className={pathname === "/periodic-ingestion" ? "text-orange-800" : "text-muted-foreground"} />
                       </Link>
                     </TooltipTrigger>
                     <TooltipContent side="right">Periodic Ingestion</TooltipContent>
@@ -375,11 +387,11 @@ export function Sidebar() {
                         href="/metrics-dashboard"
                         className={`p-2 rounded-md transition-colors ${
                           pathname === "/metrics-dashboard"
-                            ? "bg-primary"
+                            ? "bg-orange-100"
                             : "hover:bg-secondary/50"
                         }`}
                       >
-                        <BarChart size={18} className={pathname === "/metrics-dashboard" ? "text-primary-foreground" : "text-muted-foreground"} />
+                        <BarChart size={18} className={pathname === "/metrics-dashboard" ? "text-orange-800" : "text-muted-foreground"} />
                       </Link>
                     </TooltipTrigger>
                     <TooltipContent side="right">Metrics Dashboard</TooltipContent>
@@ -405,6 +417,12 @@ export function Sidebar() {
           )}
         </AnimatePresence>
       </div>
+      
+      {/* Chat History Popup */}
+      <ChatHistory 
+        isOpen={isChatHistoryOpen} 
+        onClose={() => setIsChatHistoryOpen(false)} 
+      />
     </motion.div>
   );
 }

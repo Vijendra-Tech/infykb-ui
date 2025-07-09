@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { IngestionTrackingModal } from "./ingestion-tracking-modal";
+import { IngestionTrackingDrawer } from "./ingestion-tracking-drawer";
 import { useDataIngestionStore, type IngestionSourceType, type IngestionSource } from "@/store/use-data-ingestion-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -686,8 +686,8 @@ export function DataIngestion() {
         </CardContent>
       </Card>
 
-      {/* Ingestion Tracking Modal */}
-      <IngestionTrackingModal
+      {/* Tracking drawer */}
+      <IngestionTrackingDrawer
         isOpen={isTrackingModalOpen}
         onOpenChange={setIsTrackingModalOpen}
         sourceId={trackingSourceId}

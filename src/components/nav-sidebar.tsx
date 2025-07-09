@@ -9,7 +9,9 @@ import {
   FileText,
   Menu,
   Briefcase,
-  LayoutDashboard
+  LayoutDashboard,
+  Cpu,
+  MessageSquare
 } from "lucide-react";
 import {
   Tooltip,
@@ -72,6 +74,16 @@ export function NavSidebar() {
         label="Knowledge Base" 
         active={activeItem === "kb"}
         onClick={() => setActiveItem("kb")}
+      />
+      
+      <NavItem 
+        icon={<Cpu className="h-5 w-5" />} 
+        label="Agent Chat" 
+        active={activeItem === "agent-chat"}
+        onClick={() => {
+          setActiveItem("agent-chat");
+          window.location.href = "/agent-chat";
+        }}
       />
       
       <NavItem 
