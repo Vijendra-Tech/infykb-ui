@@ -25,6 +25,8 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AgentMode } from "./agent-mode";
+import { LangchainChatWrapper } from "./langchain-chat-wrapper";
+import { LoaderCircle, PenLine } from "lucide-react";
 
 type Message = {
   id?: string;
@@ -61,6 +63,7 @@ export function ChatInterface() {
   const [selectedModel, setSelectedModel] = useState("Cascade");
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const [activeButton, setActiveButton] = useState('chat');
+  const [useLangchainInterface, setUseLangchainInterface] = useState(true);
   const [ticketInfo, setTicketInfo] = useState({
     id: 'TKT-000000',
     status: 'open',
@@ -87,7 +90,7 @@ export function ChatInterface() {
   // Scroll to bottom of messages when they change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, activeButton]);
+  }, [messages, activeButton, useLangchainInterface]);
 
   // Close model dropdown when clicking outside
   useEffect(() => {
@@ -104,6 +107,28 @@ export function ChatInterface() {
   const handleSendMessage = () => {
     if (!inputValue.trim()) return;
     
+    // If in LangGraph mode, we'll handle the message differently
+    // In a real implementation, this would send the message to the LangGraph server
+    if (useLangchainInterface) {
+      // The message will be handled by the LangchainChatInterface component
+      // We're just clearing the input here
+      setInputValue("");
+      
+      // In a real implementation, we would need to pass the message to the LangchainChatInterface
+      // This would be done through a shared context or by passing a ref
+      // For now, we're just simulating this behavior
+      
+      // Access the LangchainChatInterface component and call its handleSendMessage function
+      // This is a simplified approach - in a real app, you would use a proper state management solution
+      const event = new CustomEvent('langchain-message', { 
+        detail: { message: inputValue } 
+      });
+      document.dispatchEvent(event);
+      
+      return;
+    }
+    
+    // Regular chat mode handling
     // Add user message
     const newMessages = [
       ...messages,
@@ -193,73 +218,16 @@ export function ChatInterface() {
 
   return (
     <div className="flex flex-col h-full w-full bg-gradient-to-b from-background to-muted/20">
-      {/* Header with ticket info and model selector */}
-      <div className="flex items-center justify-between border-b border-border p-3 bg-muted/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="flex items-center gap-4">
-          
-          {/* Ticket information */}
-          <div className="flex items-center gap-2 bg-muted/70 px-3 py-1.5 rounded-md text-xs border border-border/50 shadow-sm">
-            <span className="font-medium">{ticketInfo.id}</span>
-            <span className="text-muted-foreground">|</span>
-            <div className="flex items-center gap-1">
-              <Clock className="h-3 w-3 text-muted-foreground" />
-              <span>Open</span>
-            </div>
-            <span className="text-muted-foreground">|</span>
-            <ClientOnly>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span className="font-medium">Ticket: {ticketInfo.id}</span>
-                <span className="px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 capitalize">{ticketInfo.status}</span>
-                <span className="px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 capitalize">{ticketInfo.priority}</span>
-              </div>
-            </ClientOnly>
+      {/* Main content area - conditionally render chat, agent mode, or langchain */}
+      {useLangchainInterface ? (
+        // LangGraph Interface
+        <div className="flex-1 w-full flex flex-col">
+          <div className="flex-1 scrollbar-custom scrollbar-always">
+            <LangchainChatWrapper />
           </div>
+          {/* Keep the same input area for consistency */}
         </div>
-        
-        <div className="relative" ref={dropdownRef}>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsModelDropdownOpen(!isModelDropdownOpen);
-            }}
-            className="flex items-center gap-1.5 text-xs bg-background/80 border-border/50 hover:bg-background shadow-sm"
-          >
-            <Sparkles className="h-3 w-3 text-primary mr-1" />
-            <span>{selectedModel}</span>
-            <ChevronDown className="h-3 w-3 ml-1 opacity-70" />
-          </Button>
-          
-          {isModelDropdownOpen && (
-            <div className="absolute right-0 top-full mt-1 w-56 rounded-md shadow-lg bg-white dark:bg-gray-800 border border-border z-10 overflow-hidden">
-              <div className="py-1">
-                {models.map((model) => (
-                  <button
-                    key={model}
-                    className={`w-full text-left px-4 py-2.5 text-sm hover:bg-muted flex items-center justify-between ${selectedModel === model ? 'bg-primary/5' : ''}`}
-                    onClick={() => {
-                      setSelectedModel(model);
-                      setIsModelDropdownOpen(false);
-                    }}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Sparkles className={`h-4 w-4 ${selectedModel === model ? 'text-primary' : 'text-muted-foreground/70'}`} />
-                      <span>{model}</span>
-                    </div>
-                    {selectedModel === model && (
-                      <Check className="h-4 w-4 text-primary" />
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-      
-      {/* Main content area - conditionally render chat or agent mode */}
-      {activeButton === 'chat' ? (
+      ) : true ? (
         // Regular Chat Interface
         <div className="flex-1 w-full flex flex-col">
           <div className="flex-1 scrollbar-custom scrollbar-always">
@@ -419,9 +387,12 @@ export function ChatInterface() {
               <div className="flex gap-2 w-full max-w-5xl mx-auto">
                 <div className="flex gap-2 bg-muted/30 p-0.5 rounded-lg self-end">
                   <Button
-                    variant={activeButton === 'chat' ? 'default' : 'ghost'}
+                    variant={activeButton === 'chat' && !useLangchainInterface ? 'default' : 'ghost'}
                     size="sm"
-                    onClick={() => setActiveButton('chat')}
+                    onClick={() => {
+                      setActiveButton('chat');
+                      setUseLangchainInterface(false);
+                    }}
                     className={`flex items-center gap-1.5 ${activeButton === 'chat' ? 'shadow-sm' : ''}`}
                   >
                     <MessageSquare className="h-4 w-4" />
@@ -430,51 +401,67 @@ export function ChatInterface() {
                   <Button
                     variant={activeButton === 'agent' ? 'default' : 'ghost'}
                     size="sm"
-                    onClick={() => setActiveButton('agent')}
+                    onClick={() => {
+                      setActiveButton('agent');
+                      setUseLangchainInterface(false);
+                    }}
                     className={`flex items-center gap-1.5 ${activeButton === 'agent' ? 'shadow-sm' : ''}`}
                   >
                     <Cpu className="h-4 w-4" />
                     <span>L2 Support</span>
                   </Button>
-                </div>
-                <div className="relative flex-1">
-                  <textarea 
-                    className="w-full rounded-lg border border-input bg-background/80 px-4 py-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:cursor-not-allowed disabled:opacity-50 resize-none min-h-[80px] shadow-sm" 
-                    placeholder="Describe the technical issue in detail..." 
-                    rows={3}
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendMessage();
-                      }
+                  <Button
+                    variant={useLangchainInterface ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => {
+                      setUseLangchainInterface(true);
                     }}
-                  />
-                  <div className="absolute bottom-3 right-3 flex gap-2">
-                    <Button 
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setShowKnowledgePanel(!showKnowledgePanel)}
-                      className="flex items-center gap-1"
-                    >
-                      <Search className="h-3 w-3" />
-                      <span>KB</span>
-                    </Button>
-                    <Button 
-                      size="sm"
-                      onClick={handleSendMessage}
-                      disabled={!inputValue.trim()}
-                      className="flex items-center gap-1"
-                    >
-                      <Send className="h-3 w-3" />
-                      <span>Send</span>
-                    </Button>
+                    className={`flex items-center gap-1.5 ${useLangchainInterface ? 'shadow-sm' : ''}`}
+                  >
+                    <PenLine className="h-4 w-4" />
+                    <span>LangGraph</span>
+                  </Button>
+                </div>
+                {!useLangchainInterface && (
+                  <div className="relative flex-1">
+                    <textarea 
+                      className="w-full rounded-lg border border-input bg-background/80 px-4 py-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:cursor-not-allowed disabled:opacity-50 resize-none min-h-[80px] shadow-sm" 
+                      placeholder="Describe the technical issue in detail..." 
+                      rows={3}
+                      value={inputValue}
+                      onChange={(e) => setInputValue(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendMessage();
+                        }
+                      }}
+                    />
+                    <div className="absolute bottom-3 right-3 flex gap-2">
+                      <Button 
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setShowKnowledgePanel(!showKnowledgePanel)}
+                        className="flex items-center gap-1"
+                      >
+                        <Search className="h-3 w-3" />
+                        <span>KB</span>
+                      </Button>
+                      <Button 
+                        size="sm"
+                        onClick={handleSendMessage}
+                        disabled={!inputValue.trim()}
+                        className="flex items-center gap-1"
+                      >
+                        <Send className="h-3 w-3" />
+                        <span>Send</span>
+                      </Button>
+                    </div>
                   </div>
+                )}
                 </div>
               </div>
             </div>
-          </div>
           
           {/* Knowledge base panel - redesigned without border */}
           {showKnowledgePanel && (
@@ -555,3 +542,6 @@ export function ChatInterface() {
     </div>
   );
 }
+
+// Also export as default for backward compatibility
+export default ChatInterface;

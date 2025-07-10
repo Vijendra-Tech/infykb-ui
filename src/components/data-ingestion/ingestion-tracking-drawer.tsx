@@ -80,10 +80,10 @@ export function IngestionTrackingDrawer({ isOpen, onOpenChange, sourceId }: Inge
                 {source?.status}
               </Badge>
             </DrawerTitle>
-            <DrawerClose>
-              <Button variant="ghost" size="icon">
+            <DrawerClose asChild>
+              <div className="cursor-pointer">
                 <X className="h-4 w-4" />
-              </Button>
+              </div>
             </DrawerClose>
           </div>
           <DrawerDescription>
