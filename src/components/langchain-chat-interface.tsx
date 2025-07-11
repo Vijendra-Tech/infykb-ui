@@ -560,6 +560,8 @@ export function LangchainChatInterface({ hideInput = false }: { hideInput?: bool
   const [showHistory, setShowHistory] = useState(false);
   const [selectedModel, setSelectedModel] = useState("gpt-4");
   const [agentMode, setAgentMode] = useState(true);
+  const [promptSuggestions, setPromptSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -619,14 +621,147 @@ export function LangchainChatInterface({ hideInput = false }: { hideInput?: bool
     }, 1000);
   };
   
-  // Handle input changes
-  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setInputValue(e.target.value);
+  // Reference to the suggestions container for click-outside handling
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+  
+  // Handle click outside to dismiss suggestions
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
     
-    // Auto-resize textarea
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+  
+  // Default suggestions that are always available
+  const defaultSuggestions = [
+    "How do I troubleshoot application errors?",
+    "What are best practices for database optimization?",
+    "How can I improve API security?"
+  ];
+  
+  // Generate prompt suggestions based on user input
+  const generatePromptSuggestions = (input: string) => {
+    // Always show default suggestions if input is empty
+    if (input.length === 0) {
+      setPromptSuggestions(defaultSuggestions);
+      setShowSuggestions(true);
+      return;
+    }
+    
+    // For very short inputs, still show suggestions but don't try to match
+    if (input.length < 2) {
+      setPromptSuggestions(defaultSuggestions);
+      setShowSuggestions(true);
+      return;
+    }
+    
+    const lowercaseInput = input.toLowerCase();
+    let suggestions: string[] = [];
+    
+    // Technical support related suggestions
+    if (lowercaseInput.includes('error') || lowercaseInput.includes('issue') || 
+        lowercaseInput.includes('problem') || lowercaseInput.includes('fix') || 
+        lowercaseInput.includes('bug')) {
+      suggestions = [
+        'What are the steps to troubleshoot this error?',
+        'Can you help diagnose this issue?',
+        'How do I fix this problem in my application?'
+      ];
+    }
+    // Database related suggestions
+    else if (lowercaseInput.includes('database') || lowercaseInput.includes('query') || 
+             lowercaseInput.includes('sql') || lowercaseInput.includes('db')) {
+      suggestions = [
+        'How do I optimize this database query?',
+        'What\'s the best way to structure this database?',
+        'Can you explain this SQL query?'
+      ];
+    }
+    // API related suggestions
+    else if (lowercaseInput.includes('api') || lowercaseInput.includes('endpoint') || 
+             lowercaseInput.includes('request') || lowercaseInput.includes('response')) {
+      suggestions = [
+        'How do I authenticate with this API?',
+        'What\'s the correct format for this API request?',
+        'How do I handle errors from this API?'
+      ];
+    }
+    // Knowledge base related suggestions
+    else if (lowercaseInput.includes('kb') || lowercaseInput.includes('knowledge') || 
+             lowercaseInput.includes('doc') || lowercaseInput.includes('article')) {
+      suggestions = [
+        'Where can I find documentation about this feature?',
+        'Is there a knowledge base article about this topic?',
+        'How do I contribute to the knowledge base?'
+      ];
+    }
+    // Infrastructure related suggestions
+    else if (lowercaseInput.includes('server') || lowercaseInput.includes('cloud') || 
+             lowercaseInput.includes('deploy') || lowercaseInput.includes('infra')) {
+      suggestions = [
+        'How do I deploy this application to production?',
+        'What\'s the best cloud service for this use case?',
+        'How do I monitor server performance?'
+      ];
+    }
+    // Security related suggestions
+    else if (lowercaseInput.includes('security') || lowercaseInput.includes('auth') || 
+             lowercaseInput.includes('password') || lowercaseInput.includes('hack')) {
+      suggestions = [
+        'What are the best practices for securing this application?',
+        'How do I implement proper authentication?',
+        'How can I prevent security vulnerabilities?'
+      ];
+    }
+    // If no specific category matches, use default suggestions
+    else {
+      suggestions = defaultSuggestions;
+    }
+    
+    // Always show suggestions
+    setPromptSuggestions(suggestions);
+    setShowSuggestions(true);
+  };
+  
+  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newValue = e.target.value;
+    setInputValue(newValue);
+    
+    // Generate suggestions based on input
+    generatePromptSuggestions(newValue);
+    
+    // Auto-resize the textarea
     if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
+    }
+  };
+  
+  // Handle selecting a suggestion
+  const handleSelectSuggestion = (suggestion: string) => {
+    setInputValue(suggestion);
+    setShowSuggestions(false);
+    // Focus the textarea after selecting a suggestion
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  };
+  
+  // Show suggestions when input field is focused
+  const handleInputFocus = () => {
+    // If there's no input, show default suggestions
+    if (inputValue.length === 0) {
+      setPromptSuggestions(defaultSuggestions);
+      setShowSuggestions(true);
+    } else {
+      // Otherwise, generate suggestions based on current input
+      generatePromptSuggestions(inputValue);
     }
   };
   
@@ -770,17 +905,14 @@ export function LangchainChatInterface({ hideInput = false }: { hideInput?: bool
       >
         {mockMessages.length === 0 ? (
           <div className="flex h-full items-center justify-center">
-            <div className="text-center max-w-md mx-auto p-8 rounded-2xl bg-gradient-to-b from-background to-muted/20 border border-muted/30 shadow-sm">
-              <div className="w-16 h-16 mx-auto rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                <Cpu className="h-8 w-8 text-primary" />
-              </div>
-              <h3 className="text-xl font-medium bg-gradient-to-r from-primary to-blue-500 bg-clip-text text-transparent">Welcome to the Chat</h3>
-              <p className="mt-3 text-muted-foreground leading-relaxed">
-                I'm here to assist you with your questions and tasks. Send a message to begin our conversation.
+            <div className="text-center max-w-md mx-auto p-6 rounded-2xl bg-gradient-to-b from-background to-muted/20 border border-muted/30 shadow-sm">
+              {/* Infinity KB Logo */}
+              <h3 className="text-xl font-medium bg-gradient-to-r from-primary to-blue-500 bg-clip-text text-transparent">Infinity KB</h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Welcome to the chat. How can I help you today?
               </p>
-              <div className="mt-6 p-3 bg-muted/30 rounded-lg border border-muted/50 text-sm">
-                <p className="font-medium text-xs uppercase tracking-wider text-muted-foreground mb-2">Tip</p>
-                <p className="text-muted-foreground">Try asking about your application, database queries, or any technical questions you might have.</p>
+              <div className="mt-4 p-2 bg-muted/30 rounded-lg border border-muted/50 text-xs">
+                <p className="text-muted-foreground">Ask me about your application or technical questions.</p>
               </div>
             </div>
           </div>
@@ -830,41 +962,51 @@ export function LangchainChatInterface({ hideInput = false }: { hideInput?: bool
       {!hideInput && (
         <div className="p-4 border-t border-border bg-gradient-to-b from-background/80 to-muted/30 backdrop-blur-sm sticky bottom-0 shadow-sm">
           <div className="max-w-3xl mx-auto">
-            {/* Support tools toolbar */}
+            {/* Support tools toolbar with horizontal scrolling */}
             <div className="mb-2 flex items-center justify-between">
-              <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 scrollbar-none">
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  className="h-7 px-2 text-xs bg-background/80 border-muted/50 hover:bg-muted/20 flex items-center gap-1"
-                >
-                  <Terminal className="h-3 w-3 text-blue-500" />
-                  <span>Run Diagnostics</span>
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  className="h-7 px-2 text-xs bg-background/80 border-muted/50 hover:bg-muted/20 flex items-center gap-1"
-                >
-                  <Database className="h-3 w-3 text-amber-500" />
-                  <span>Query DB</span>
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  className="h-7 px-2 text-xs bg-background/80 border-muted/50 hover:bg-muted/20 flex items-center gap-1"
-                >
-                  <FileText className="h-3 w-3 text-green-500" />
-                  <span>View Logs</span>
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  className="h-7 px-2 text-xs bg-background/80 border-muted/50 hover:bg-muted/20 flex items-center gap-1"
-                >
-                  <AlertCircle className="h-3 w-3 text-red-500" />
-                  <span>Escalate</span>
-                </Button>
+              <div className="flex-1 overflow-hidden">
+                <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent -mx-1 px-1 py-0.5 snap-x">
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="h-7 px-2 text-xs bg-background/80 border-muted/50 hover:bg-muted/20 flex items-center gap-1 flex-shrink-0 snap-start"
+                  >
+                    <Terminal className="h-3 w-3 text-blue-500" />
+                    <span>Run Diagnostics</span>
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="h-7 px-2 text-xs bg-background/80 border-muted/50 hover:bg-muted/20 flex items-center gap-1 flex-shrink-0 snap-start"
+                  >
+                    <Database className="h-3 w-3 text-amber-500" />
+                    <span>Query DB</span>
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="h-7 px-2 text-xs bg-background/80 border-muted/50 hover:bg-muted/20 flex items-center gap-1 flex-shrink-0 snap-start"
+                  >
+                    <FileText className="h-3 w-3 text-green-500" />
+                    <span>View Logs</span>
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="h-7 px-2 text-xs bg-background/80 border-muted/50 hover:bg-muted/20 flex items-center gap-1 flex-shrink-0 snap-start"
+                  >
+                    <AlertCircle className="h-3 w-3 text-red-500" />
+                    <span>Escalate</span>
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="h-7 px-2 text-xs bg-background/80 border-muted/50 hover:bg-muted/20 flex items-center gap-1 flex-shrink-0 snap-start"
+                  >
+                    <HelpCircle className="h-3 w-3 text-purple-500" />
+                    <span>Knowledge Base</span>
+                  </Button>
+                </div>
               </div>
               
               <div className="flex items-center space-x-1">
@@ -886,32 +1028,68 @@ export function LangchainChatInterface({ hideInput = false }: { hideInput?: bool
               </div>
             </div>
             
+            {/* Prompt suggestions chips above input area */}
+            {showSuggestions && promptSuggestions.length > 0 && (
+              <div 
+                ref={suggestionsRef}
+                className="mb-2 p-2 bg-background/80 border border-primary/20 rounded-lg"
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center">
+                    <Sparkles className="h-4 w-4 text-primary mr-2" />
+                    <span className="text-sm font-medium">Try asking:</span>
+                  </div>
+                  <button 
+                    className="text-muted-foreground hover:text-foreground p-1 rounded-full hover:bg-muted/50"
+                    onClick={() => setShowSuggestions(false)}
+                  >
+                    <XIcon className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {promptSuggestions.map((suggestion, index) => (
+                    <button
+                      key={index}
+                      className="px-3 py-1.5 text-xs bg-muted/50 hover:bg-primary/10 text-foreground rounded-full border border-muted/50 transition-colors flex items-center"
+                      onClick={() => handleSelectSuggestion(suggestion)}
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            
             {/* Input area */}
-            <div className="relative flex items-end bg-background rounded-xl shadow-sm border border-muted/50 transition-all hover:border-primary/30 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20 overflow-hidden">
-              <textarea
-                ref={textareaRef}
-                value={inputValue}
-                onChange={handleTextareaChange}
-                onKeyDown={handleKeyPress}
-                placeholder="Type your message..."
-                className="w-full bg-transparent px-4 pt-3 pb-2 pr-16 text-sm focus:outline-none min-h-[60px] max-h-[200px] resize-none custom-scrollbar"
-                rows={1}
-                disabled={isLoading}
-              />
-              <div className="absolute right-2 bottom-2 flex space-x-1">
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-8 w-8 rounded-full hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
-                  onClick={handleSendMessage}
-                  disabled={inputValue.trim() === "" || isLoading}
-                >
-                  {isLoading ? (
-                    <LoaderCircle className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Send className="h-4 w-4" />
-                  )}
-                </Button>
+            <div className="relative">
+              <div className="relative flex items-end bg-background rounded-xl shadow-sm border border-muted/50 transition-all hover:border-primary/30 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20 overflow-hidden">
+                <textarea
+                  ref={textareaRef}
+                  value={inputValue}
+                  onChange={handleTextareaChange}
+                  onKeyDown={handleKeyPress}
+                  onFocus={handleInputFocus}
+                  onClick={handleInputFocus}
+                  placeholder="Type your message..."
+                  className="w-full bg-transparent px-4 pt-3 pb-2 pr-16 text-sm focus:outline-none min-h-[60px] max-h-[200px] resize-none custom-scrollbar"
+                  rows={1}
+                  disabled={isLoading}
+                />
+                <div className="absolute right-2 bottom-2 flex space-x-1">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 rounded-full hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
+                    onClick={handleSendMessage}
+                    disabled={inputValue.trim() === "" || isLoading}
+                  >
+                    {isLoading ? (
+                      <LoaderCircle className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Send className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
               </div>
             </div>
             
