@@ -182,8 +182,15 @@ export default function SettingsPage() {
   const handleProviderChange = (value: LLMProvider) => {
     setTempProvider(value);
     
+    // Handle 'none' case separately
+    if (value === 'none') {
+      setAvailableModels([]);
+      setTempModelId('');
+      return;
+    }
+    
     // Get available models for this provider
-    const models = providerModels[value] || [];
+    const models = providerModels[value as Exclude<LLMProvider, 'none'>] || [];
     setAvailableModels(models);
     
     // Set the first model as default when changing provider
