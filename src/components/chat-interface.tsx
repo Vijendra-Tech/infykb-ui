@@ -21,8 +21,11 @@ import {
   CheckCircle,
   Clock,
   HelpCircle,
-  Layers
+  Layers,
+  Settings
 } from "lucide-react";
+import { useLLMSettingsStore } from "@/store/use-llm-settings-store";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { AgentMode } from "./agent-mode";
 import { LangchainChatWrapper } from "./langchain-chat-wrapper";
@@ -44,6 +47,21 @@ export function ChatInterface() {
   const [inputValue, setInputValue] = useState("");
   // Use a static timestamp for SSR to prevent hydration errors
   const staticTimestamp = new Date('2023-01-01T00:00:00Z');
+  
+  // Get API key from LLM settings store
+  const { apiKey, selectedModel: llmModel } = useLLMSettingsStore();
+  
+  // State for API key validation error
+  const [apiKeyError, setApiKeyError] = useState<string | null>(null);
+  
+  // Check if API key is provided on component mount
+  useEffect(() => {
+    if (!apiKey || apiKey.trim() === '') {
+      setApiKeyError('No API key found. Please add your API key in settings.');
+    } else {
+      setApiKeyError(null);
+    }
+  }, [apiKey]);
   
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -106,6 +124,12 @@ export function ChatInterface() {
 
   const handleSendMessage = () => {
     if (!inputValue.trim()) return;
+    
+    // Check if API key is available before sending message
+    if (!apiKey || apiKey.trim() === '') {
+      setApiKeyError('No API key found. Please add your API key in settings.');
+      return;
+    }
     
     // If in LangGraph mode, we'll handle the message differently
     // In a real implementation, this would send the message to the LangGraph server
@@ -219,7 +243,29 @@ export function ChatInterface() {
   return (
     <div className="flex flex-col h-full w-full bg-gradient-to-b from-background to-muted/20">
       {/* Main content area - conditionally render chat, agent mode, or langchain */}
-      {useLangchainInterface ? (
+      {apiKeyError ? (
+        // API Key Error Message
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="flex flex-col items-center justify-center h-full p-8 text-center bg-gradient-to-b from-transparent to-muted/20"
+        >
+          <div className="mb-6 bg-red-500/10 p-4 rounded-full">
+            <AlertCircle className="h-12 w-12 text-red-500" />
+          </div>
+          <h2 className="text-2xl font-bold mb-2">API Key Required</h2>
+          <p className="text-muted-foreground mb-8 max-w-md">
+            {apiKeyError}
+          </p>
+          <Link href="/settings">
+            <Button className="bg-primary hover:bg-primary/90">
+              <Settings className="h-4 w-4 mr-2" />
+              Go to Settings
+            </Button>
+          </Link>
+        </motion.div>
+      ) : useLangchainInterface ? (
         // LangGraph Interface
         <div className="flex-1 w-full flex flex-col">
           <div className="flex-1 scrollbar-custom scrollbar-always">

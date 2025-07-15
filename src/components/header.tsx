@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Search, Edit, Sparkles, RefreshCcw, History, Menu, X, Home, BotIcon, Database, Clock, BarChart, FileText } from "lucide-react";
+import { Search, Edit, Sparkles, RefreshCcw, History, Menu, X, Home, BotIcon, Database, Clock, BarChart, FileText, Settings } from "lucide-react";
 import { ModeToggle } from "@/components/mode-toggle";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { useSidebar } from "@/context/sidebar-context";
@@ -198,6 +198,13 @@ export function Header() {
                     }}
                   />
                   {/* Premium features menu item removed */}
+                  
+                  <MobileMenuItem 
+                    icon={<Settings size={18} />} 
+                    label="Settings" 
+                    href="/settings"
+                    active={pathname === "/settings"}
+                  />
                   
                   <div className="h-px bg-border my-1" />
                   

@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import { useLLMSettingsStore } from "@/store/use-llm-settings-store";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { 
   Sparkles, 
@@ -26,6 +28,7 @@ import {
   CircleX,
   ArrowDown,
   LoaderCircle,
+  Settings,
   PenLine,
   Paperclip
 } from "lucide-react";
@@ -168,8 +171,36 @@ function useStream<T, O>(
 }
 
 // Mock StickToBottom component
-const StickToBottom: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  return <div className="flex flex-col h-full">{children}</div>;
+interface StickToBottomProps {
+  children: React.ReactNode;
+  apiKeyError?: string | null;
+}
+
+const StickToBottom: React.FC<StickToBottomProps> = ({ children, apiKeyError }) => {
+  // Display API key error message if no API key is provided
+  if (apiKeyError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full p-8 text-center bg-gradient-to-b from-transparent to-muted/20">
+        <div className="mb-6 bg-red-500/10 p-4 rounded-full">
+          <AlertCircle className="h-12 w-12 text-red-500" />
+        </div>
+        <h2 className="text-2xl font-bold mb-2">API Key Required</h2>
+        <p className="text-muted-foreground mb-8 max-w-md">
+          {apiKeyError}
+        </p>
+        <Link href="/settings">
+          <Button className="bg-primary hover:bg-primary/90">
+            <Settings className="h-4 w-4 mr-2" />
+            Go to Settings
+          </Button>
+        </Link>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="flex flex-col h-full">{children}</div>
+  );
 };
 
 // Define types
@@ -339,45 +370,24 @@ export const StreamProvider: React.FC<{ children: React.ReactNode }> = ({
   // Determine final values to use, prioritizing URL params then env vars
   const finalApiUrl = apiUrl || envApiUrl;
   const finalAssistantId = assistantId || envAssistantId;
-
-  // Show the form if we don't have an API URL or assistant ID
-  if (!finalApiUrl || !finalAssistantId) {
-    return (
-      <div className="flex min-h-screen w-full items-center justify-center p-4 bg-gradient-to-b from-background to-muted/20">
-        <div className="animate-in fade-in-0 zoom-in-95 bg-background flex max-w-3xl flex-col rounded-lg border shadow-lg">
-          <div className="mt-8 flex flex-col gap-2 border-b p-6">
-            <div className="flex flex-col items-start gap-2">
-              <div className="flex items-center gap-2">
-                <Cpu className="h-6 w-6 text-primary" />
-                <h1 className="text-xl font-semibold tracking-tight">
-                  Agent Chat
-                </h1>
-              </div>
-            </div>
-            <p className="text-muted-foreground">
-              Welcome to Agent Chat! Before you get started, you need to enter
-              the URL of the deployment and the assistant / graph ID.
-            </p>
-          </div>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-
-              const form = e.target as HTMLFormElement;
-              const formData = new FormData(form);
-              const apiUrl = formData.get("apiUrl") as string;
-              const assistantId = formData.get("assistantId") as string;
-              const apiKey = formData.get("apiKey") as string;
-
-              setApiUrl(apiUrl);
-              localStorage.setItem("lg:chat:apiKey", apiKey);
-              setApiKey(apiKey);
-              setAssistantId(assistantId);
-
-              form.reset();
-            }}
-            className="bg-muted/50 flex flex-col gap-6 p-6"
-          >
+  
+  // Handle form submission
+  const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const formApiUrl = formData.get("apiUrl") as string;
+    const formAssistantId = formData.get("assistantId") as string;
+    const formApiKey = formData.get("apiKey") as string;
+    
+    setApiUrl(formApiUrl);
+    localStorage.setItem("lg:chat:apiKey", formApiKey);
+    setApiKey(formApiKey);
+    setAssistantId(formAssistantId);
+  };
+  
+  return (
+    <div className="p-4">
+      <form onSubmit={handleFormSubmit} className="bg-muted/50 flex flex-col gap-6 p-6">
             <div className="flex flex-col gap-2">
               <Label htmlFor="apiUrl">
                 Deployment URL<span className="text-rose-500">*</span>
@@ -439,17 +449,15 @@ export const StreamProvider: React.FC<{ children: React.ReactNode }> = ({
                 Continue
               </Button>
             </div>
-          </form>
-        </div>
-      </div>
-    );
-  }
+      </form>
+    </div>
+  );
 
   return (
     <StreamSession
       apiKey={apiKey}
-      apiUrl={finalApiUrl}
-      assistantId={finalAssistantId}
+      apiUrl={finalApiUrl || DEFAULT_API_URL}
+      assistantId={finalAssistantId || DEFAULT_ASSISTANT_ID}
     >
       {children}
     </StreamSession>
@@ -531,8 +539,24 @@ export const useArtifactContext = (): ArtifactContextType => {
 };
 
 // Main component
-export function LangchainChatInterface({ hideInput = false }: { hideInput?: boolean } = {}) {
+export const LangchainChatInterface: React.FC<{ hideInput?: boolean }> = ({ hideInput = false }) => {
   const isClient = useClientOnly();
+  
+  // Get API key from LLM settings store
+  const { apiKey } = useLLMSettingsStore();
+  
+  // State for API key validation error
+  const [apiKeyError, setApiKeyError] = useState<string | null>(null);
+  
+  // Check if API key is provided on component mount
+  useEffect(() => {
+    if (!apiKey || apiKey.trim() === '') {
+      setApiKeyError('No API key found. Please add your API key in settings.');
+    } else {
+      setApiKeyError(null);
+    }
+  }, [apiKey]);
+  
   // Mock the stream context since we're using simplified providers
   const [mockMessages, setMockMessages] = useState<Array<{id: string; type: 'human' | 'ai' | 'system' | 'tool'; content: string}>>([    
    
@@ -599,6 +623,12 @@ export function LangchainChatInterface({ hideInput = false }: { hideInput?: bool
   
   // Handle sending a message
   const handleSendMessage = () => {
+    // Check if API key is provided
+    if (!apiKey || apiKey.trim() === '') {
+      setApiKeyError('No API key found. Please add your API key in settings.');
+      return;
+    }
+    
     if (inputValue.trim() === "" || isLoading) return;
     
     setIsLoading(true);
@@ -896,6 +926,27 @@ export function LangchainChatInterface({ hideInput = false }: { hideInput?: bool
       });
   };
   
+  // Display API key error message if no API key is provided
+  if (apiKeyError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full p-8 text-center bg-gradient-to-b from-transparent to-muted/20">
+        <div className="mb-6 bg-red-500/10 p-4 rounded-full">
+          <AlertCircle className="h-12 w-12 text-red-500" />
+        </div>
+        <h2 className="text-2xl font-bold mb-2">API Key Required</h2>
+        <p className="text-muted-foreground mb-8 max-w-md">
+          {apiKeyError}
+        </p>
+        <Link href="/settings">
+          <Button className="bg-primary hover:bg-primary/90">
+            <Settings className="h-4 w-4 mr-2" />
+            Go to Settings
+          </Button>
+        </Link>
+      </div>
+    );
+  }
+  
   return (
     <div className="flex h-full flex-col overflow-hidden bg-background">
       {/* Main content area with messages */}
@@ -1034,29 +1085,35 @@ export function LangchainChatInterface({ hideInput = false }: { hideInput?: bool
                 ref={suggestionsRef}
                 className="mb-2 p-2 bg-background/80 border border-primary/20 rounded-lg"
               >
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center">
-                    <Sparkles className="h-4 w-4 text-primary mr-2" />
-                    <span className="text-sm font-medium">Try asking:</span>
+                {apiKeyError ? (
+                  <div className="flex flex-col items-center justify-center h-full p-8 text-center bg-gradient-to-b from-transparent to-muted/20">
+                    <div className="mb-6 bg-red-500/10 p-4 rounded-full">
+                      <AlertCircle className="h-12 w-12 text-red-500" />
+                    </div>
+                    <h2 className="text-2xl font-bold mb-2">API Key Required</h2>
+                    <p className="text-muted-foreground mb-8 max-w-md">
+                      {apiKeyError}
+                    </p>
+                    <Link href="/settings">
+                      <Button className="bg-primary hover:bg-primary/90">
+                        <Settings className="h-4 w-4 mr-2" />
+                        Go to Settings
+                      </Button>
+                    </Link>
                   </div>
-                  <button 
-                    className="text-muted-foreground hover:text-foreground p-1 rounded-full hover:bg-muted/50"
-                    onClick={() => setShowSuggestions(false)}
-                  >
-                    <XIcon className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {promptSuggestions.map((suggestion, index) => (
-                    <button
-                      key={index}
-                      className="px-3 py-1.5 text-xs bg-muted/50 hover:bg-primary/10 text-foreground rounded-full border border-muted/50 transition-colors flex items-center"
-                      onClick={() => handleSelectSuggestion(suggestion)}
-                    >
-                      {suggestion}
-                    </button>
-                  ))}
-                </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {promptSuggestions.map((suggestion, index) => (
+                      <button
+                        key={index}
+                        className="px-3 py-1.5 text-xs bg-muted/50 hover:bg-primary/10 text-foreground rounded-full border border-muted/50 transition-colors flex items-center"
+                        onClick={() => handleSelectSuggestion(suggestion)}
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
             

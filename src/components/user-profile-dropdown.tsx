@@ -10,7 +10,8 @@ import {
   HelpCircle, 
   ChevronRight, 
   ShieldCheck, 
-  Edit3 
+  Edit3,
+  Settings
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -107,10 +108,12 @@ export function UserProfileDropdown({
               </svg>
             </div>
           </div>
-          <DropdownMenuItem className="flex items-center gap-2 cursor-pointer">
-            <Code className="h-4 w-4" />
-            <span>Use AI code</span>
-          </DropdownMenuItem>
+          <Link href="/settings">
+            <DropdownMenuItem className="flex items-center gap-2 cursor-pointer">
+              <Settings className="h-4 w-4" />
+              <span>Settings</span>
+            </DropdownMenuItem>
+          </Link>
           <DropdownMenuItem className="flex items-center gap-2 cursor-pointer">
             <HelpCircle className="h-4 w-4" />
             <span>Help center</span>
