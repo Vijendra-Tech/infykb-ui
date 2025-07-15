@@ -22,9 +22,10 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { 
   useLLMSettingsStore, 
-  LLMModel, 
-  getProviderFromModel, 
-  LLMProvider 
+  LLMProvider,
+  providerNames,
+  ModelOption,
+  providerModels
 } from "@/store/use-llm-settings-store";
 import { Settings, Save, Key, Cloud } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
@@ -32,17 +33,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function SettingsPage() {
   const { 
-    selectedModel, 
+    selectedProvider,
+    selectedModelId, 
     apiKey, 
     azureApiEndpoint, 
     azureDeploymentName, 
     azureApiVersion, 
-    setSelectedModel, 
+    setSelectedProvider,
+    setSelectedModelId, 
     setApiKey, 
-    setAzureConfig 
+    setAzureConfig,
+    getAvailableModels,
+    getCurrentModel
   } = useLLMSettingsStore();
   
-  const [tempModel, setTempModel] = useState<LLMModel>(selectedModel);
+  const [tempProvider, setTempProvider] = useState<LLMProvider>(selectedProvider);
+  const [tempModelId, setTempModelId] = useState<string>(selectedModelId);
   const [tempApiKey, setTempApiKey] = useState(apiKey);
   const [tempAzureEndpoint, setTempAzureEndpoint] = useState(azureApiEndpoint || '');
   const [tempAzureDeployment, setTempAzureDeployment] = useState(azureDeploymentName || '');
@@ -51,62 +57,69 @@ export default function SettingsPage() {
   const [apiKeyError, setApiKeyError] = useState<string | null>(null);
   const [azureEndpointError, setAzureEndpointError] = useState<string | null>(null);
   const [azureDeploymentError, setAzureDeploymentError] = useState<string | null>(null);
-  const [activeProvider, setActiveProvider] = useState<LLMProvider>(getProviderFromModel(selectedModel));
+  const [availableModels, setAvailableModels] = useState<ModelOption[]>(getAvailableModels());
   
   const { toast } = useToast();
   const router = useRouter();
 
   // Initialize form with stored values
   useEffect(() => {
-    setTempModel(selectedModel);
+    setTempProvider(selectedProvider);
+    setTempModelId(selectedModelId);
     setTempApiKey(apiKey);
     setTempAzureEndpoint(azureApiEndpoint || '');
     setTempAzureDeployment(azureDeploymentName || '');
     setTempAzureApiVersion(azureApiVersion || '2023-12-01-preview');
-    setActiveProvider(getProviderFromModel(selectedModel));
-  }, [selectedModel, apiKey, azureApiEndpoint, azureDeploymentName, azureApiVersion]);
+    setAvailableModels(getAvailableModels());
+  }, [selectedProvider, selectedModelId, apiKey, azureApiEndpoint, azureDeploymentName, azureApiVersion, getAvailableModels]);
   
   // Scroll to Azure configuration section when it becomes visible
   useEffect(() => {
-    if (activeProvider === 'azure') {
-      // Small delay to ensure the section is rendered
+    if (tempProvider === 'azure') {
+      // Longer delay to ensure the section is rendered and animation has started
       const timer = setTimeout(() => {
         const azureSection = document.getElementById('azure-config-section');
         if (azureSection) {
-          azureSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          azureSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-      }, 100);
+      }, 300); // Increased delay to account for animation
       return () => clearTimeout(timer);
     }
-  }, [activeProvider]);
+  }, [tempProvider]);
 
-  // Validate API key based on selected model
-  const validateApiKey = (key: string, model: LLMModel): string | null => {
+  // Validate API key based on selected provider
+  const validateApiKey = (key: string, provider: LLMProvider): string | null => {
     if (!key.trim()) {
       return "API key is required";
     }
 
-    // Model-specific validation
-    if (model.startsWith('gpt') && !model.startsWith('azure')) {
-      // OpenAI API keys typically start with 'sk-' and are 51 characters
-      if (!key.startsWith('sk-') || key.length < 30) {
-        return "Invalid OpenAI API key format";
-      }
-    } else if (model.startsWith('claude')) {
-      // Anthropic API keys typically start with 'sk-ant-' and are longer
-      if (!key.startsWith('sk-ant-') && !key.startsWith('sk-')) {
-        return "Invalid Anthropic API key format";
-      }
-    } else if (model === 'gemini-pro') {
-      // Google API keys are typically 39 characters
-      if (key.length < 20) {
-        return "Invalid Google API key format";
-      }
-    } else if (model.startsWith('azure')) {
-      // Azure OpenAI API keys don't have a specific format but should be non-empty
-      if (key.length < 10) {
-        return "Azure API key seems too short";
-      }
+    // Provider-specific validation
+    switch (provider) {
+      case 'openai':
+        // OpenAI API keys typically start with 'sk-' and are 51 characters
+        if (!key.startsWith('sk-') || key.length < 30) {
+          return "Invalid OpenAI API key format";
+        }
+        break;
+      case 'anthropic':
+        // Anthropic API keys typically start with 'sk-ant-' and are longer
+        if (!key.startsWith('sk-ant-') && !key.startsWith('sk-')) {
+          return "Invalid Anthropic API key format";
+        }
+        break;
+      case 'google':
+        // Google API keys are typically 39 characters
+        if (key.length < 20) {
+          return "Invalid Google API key format";
+        }
+        break;
+      case 'azure':
+        // Azure OpenAI API keys don't have a specific format but should be non-empty
+        if (key.length < 10) {
+          return "Azure API key seems too short";
+        }
+        break;
+      // Add validation for other providers as needed
     }
 
     return null;
@@ -143,7 +156,7 @@ export default function SettingsPage() {
   const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newKey = e.target.value;
     setTempApiKey(newKey);
-    setApiKeyError(validateApiKey(newKey, tempModel));
+    setApiKeyError(validateApiKey(newKey, tempProvider));
   };
 
   // Handle Azure endpoint change
@@ -165,25 +178,39 @@ export default function SettingsPage() {
     setTempAzureApiVersion(value);
   };
 
-  // Handle model change
-  const handleModelChange = (value: LLMModel) => {
-    setTempModel(value);
-    const provider = getProviderFromModel(value);
-    setActiveProvider(provider);
+  // Handle provider change
+  const handleProviderChange = (value: LLMProvider) => {
+    setTempProvider(value);
     
-    // Re-validate API key when model changes
+    // Get available models for this provider
+    const models = providerModels[value] || [];
+    setAvailableModels(models);
+    
+    // Set the first model as default when changing provider
+    if (models.length > 0) {
+      setTempModelId(models[0].id);
+    } else {
+      setTempModelId(''); // Clear model selection if no models available
+    }
+    
+    // Re-validate API key when provider changes
     setApiKeyError(validateApiKey(tempApiKey, value));
     
     // If switching to Azure, validate Azure fields
-    if (provider === 'azure') {
+    if (value === 'azure') {
       setAzureEndpointError(validateAzureEndpoint(tempAzureEndpoint));
       setAzureDeploymentError(validateAzureDeployment(tempAzureDeployment));
     }
   };
+  
+  // Handle model change
+  const handleModelChange = (value: string) => {
+    setTempModelId(value);
+  };
 
   const handleSaveSettings = () => {
     // Final validation before saving
-    const apiKeyError = validateApiKey(tempApiKey, tempModel);
+    const apiKeyError = validateApiKey(tempApiKey, tempProvider);
     let hasError = false;
     
     if (apiKeyError) {
@@ -197,7 +224,7 @@ export default function SettingsPage() {
     }
     
     // Validate Azure fields if using Azure
-    if (activeProvider === 'azure') {
+    if (tempProvider === 'azure') {
       const endpointError = validateAzureEndpoint(tempAzureEndpoint);
       const deploymentError = validateAzureDeployment(tempAzureDeployment);
       
@@ -225,11 +252,12 @@ export default function SettingsPage() {
     if (hasError) return;
 
     // Save all settings
-    setSelectedModel(tempModel);
+    setSelectedProvider(tempProvider);
+    setSelectedModelId(tempModelId);
     setApiKey(tempApiKey);
     
     // Save Azure settings if applicable
-    if (activeProvider === 'azure') {
+    if (tempProvider === 'azure') {
       setAzureConfig({
         endpoint: tempAzureEndpoint,
         deploymentName: tempAzureDeployment,
@@ -259,61 +287,90 @@ export default function SettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
-            <div className="space-y-2">
-              <Label htmlFor="model">LLM Model</Label>
-              <Select value={tempModel} onValueChange={handleModelChange}>
-                <SelectTrigger id="model">
-                  <SelectValue placeholder="Select a model" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo (OpenAI)</SelectItem>
-                  <SelectItem value="gpt-4">GPT-4 (OpenAI)</SelectItem>
-                  <SelectItem value="claude-3-opus">Claude 3 Opus (Anthropic)</SelectItem>
-                  <SelectItem value="claude-3-sonnet">Claude 3 Sonnet (Anthropic)</SelectItem>
-                  <SelectItem value="gemini-pro">Gemini Pro (Google)</SelectItem>
-                  <SelectItem value="azure-gpt-3.5-turbo">GPT-3.5 Turbo (Azure OpenAI)</SelectItem>
-                  <SelectItem value="azure-gpt-4">GPT-4 (Azure OpenAI)</SelectItem>
-                  <SelectItem value="azure-gpt-4-turbo">GPT-4 Turbo (Azure OpenAI)</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="provider">LLM Provider</Label>
+                <Select value={tempProvider} onValueChange={handleProviderChange}>
+                  <SelectTrigger id="provider">
+                    <SelectValue placeholder="Select a provider" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(providerNames).map(([key, name]) => (
+                      <SelectItem key={key} value={key as LLMProvider}>{name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Select your preferred AI provider
+                </p>
+              </div>
+
+              {tempProvider !== 'none' && availableModels.length > 0 && (
+                <div 
+                  className="space-y-2 animate-in fade-in slide-in-from-top-5 duration-300"
+                  key={tempProvider} // Key helps React properly animate when provider changes
+                >
+                  <Label htmlFor="model">Model</Label>
+                  <Select value={tempModelId} onValueChange={handleModelChange}>
+                    <SelectTrigger id="model">
+                      <SelectValue placeholder="Select a model" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableModels.map((model) => (
+                        <SelectItem key={model.id} value={model.id}>{model.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Select the specific model from {providerNames[tempProvider]}
+                  </p>
+                </div>
+              )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="apiKey">
-                {activeProvider === 'azure' ? 'Azure API Key' : 'API Key'}
-              </Label>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Input
-                    id="apiKey"
-                    type={isApiKeyVisible ? "text" : "password"}
-                    value={tempApiKey}
-                    onChange={handleApiKeyChange}
-                    placeholder={activeProvider === 'azure' ? "Enter your Azure API key" : "Enter your API key"}
-                    className={`pr-10 ${apiKeyError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
-                  />
-                  <button
-                    type="button"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                    onClick={() => setIsApiKeyVisible(!isApiKeyVisible)}
-                  >
-                    <Key className="h-4 w-4" />
-                  </button>
+            {tempProvider !== 'none' && (
+              <div className="space-y-2 animate-in fade-in slide-in-from-top-5 duration-300">
+                <Label htmlFor="apiKey">
+                  {`${providerNames[tempProvider]} API Key`}
+                </Label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Input
+                      id="apiKey"
+                      type={isApiKeyVisible ? "text" : "password"}
+                      value={tempApiKey}
+                      onChange={handleApiKeyChange}
+                      placeholder={`Enter your ${providerNames[tempProvider]} API key`}
+                      className={`pr-10 ${apiKeyError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                      onClick={() => setIsApiKeyVisible(!isApiKeyVisible)}
+                    >
+                      <Key className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
-              </div>
-              {apiKeyError && (
-                <p className="text-xs text-red-500 mt-1">
-                  {apiKeyError}
+                {apiKeyError && (
+                  <p className="text-xs text-red-500 mt-1">
+                    {apiKeyError}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground mt-1">
+                  Your API key is stored locally in your browser and never sent to our servers.
                 </p>
-              )}
-              <p className="text-xs text-muted-foreground mt-1">
-                Your API key is stored locally in your browser and never sent to our servers.
-              </p>
-            </div>
+              </div>
+            )}
             
             {/* Azure OpenAI specific fields */}
-            {activeProvider === 'azure' && (
-              <div id="azure-config-section" className="space-y-4 mt-4 p-4 border border-blue-200 bg-blue-50 rounded-md shadow-sm">
+            {tempProvider === 'azure' && (
+              <div 
+                id="azure-config-section" 
+                className="space-y-4 mt-4 p-4 border border-blue-200 bg-blue-50 rounded-md shadow-sm
+                         animate-in fade-in slide-in-from-top-5 duration-300"
+                key="azure-config"
+              >
                 <div className="flex items-center gap-2 mb-2">
                   <Cloud className="h-5 w-5 text-blue-500" />
                   <h3 className="text-lg font-medium">Azure OpenAI Configuration</h3>

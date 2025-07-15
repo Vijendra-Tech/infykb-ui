@@ -542,8 +542,8 @@ export const useArtifactContext = (): ArtifactContextType => {
 export const LangchainChatInterface: React.FC<{ hideInput?: boolean }> = ({ hideInput = false }) => {
   const isClient = useClientOnly();
   
-  // Get API key from LLM settings store
-  const { apiKey } = useLLMSettingsStore();
+  // Get API key and provider from LLM settings store
+  const { apiKey, selectedProvider, selectedModelId, getCurrentModel } = useLLMSettingsStore();
   
   // State for API key validation error
   const [apiKeyError, setApiKeyError] = useState<string | null>(null);
@@ -551,11 +551,11 @@ export const LangchainChatInterface: React.FC<{ hideInput?: boolean }> = ({ hide
   // Check if API key is provided on component mount
   useEffect(() => {
     if (!apiKey || apiKey.trim() === '') {
-      setApiKeyError('No API key found. Please add your API key in settings.');
+      setApiKeyError(`No API key found. Please add your ${selectedProvider.toUpperCase()} API key in settings.`);
     } else {
       setApiKeyError(null);
     }
-  }, [apiKey]);
+  }, [apiKey, selectedProvider]);
   
   // Mock the stream context since we're using simplified providers
   const [mockMessages, setMockMessages] = useState<Array<{id: string; type: 'human' | 'ai' | 'system' | 'tool'; content: string}>>([    

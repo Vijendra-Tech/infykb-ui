@@ -49,7 +49,7 @@ export function ChatInterface() {
   const staticTimestamp = new Date('2023-01-01T00:00:00Z');
   
   // Get API key from LLM settings store
-  const { apiKey, selectedModel: llmModel } = useLLMSettingsStore();
+  const { apiKey, selectedModelId: llmModel } = useLLMSettingsStore();
   
   // State for API key validation error
   const [apiKeyError, setApiKeyError] = useState<string | null>(null);
