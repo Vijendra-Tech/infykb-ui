@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { IngestionTrackingDrawer } from "./ingestion-tracking-drawer";
 import { useDataIngestionStore, type IngestionSourceType, type IngestionSource } from "@/store/use-data-ingestion-store";
 import { Button } from "@/components/ui/button";
@@ -9,8 +9,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Upload, Database, Globe, RefreshCw, Play, X, Plus, FileText, Link, Pencil } from "lucide-react";
+import { Upload, Database, Globe, RefreshCw, Play, X, Plus, FileText, Link, Pencil, UploadCloud, CheckCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { formatDistanceToNow } from "date-fns";
 
 export function DataIngestion() {
@@ -36,20 +45,55 @@ export function DataIngestion() {
   const [fileError, setFileError] = useState<string | null>(null);
   const [urlError, setUrlError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   const resetForm = () => {
     setNewSourceName("");
     setNewSourceType("File Upload");
-    setSelectedFile(null);
     setSourceUrl("");
     setSourceUsername("");
     setSourcePassword("");
+    setSelectedFile(null);
     setNameError(null);
     setFileError(null);
     setUrlError(null);
     setIsSubmitting(false);
+    setIsDragging(false);
   };
   
+  // Handle drag and drop events
+  const handleDragEnter = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isDragging) {
+      setIsDragging(true);
+    }
+  }, [isDragging]);
+
+  const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const file = e.dataTransfer.files[0];
+      setSelectedFile(file);
+      setFileError(null);
+    }
+  }, []);
+
   const handleAddSource = () => {
     // Validate form
     if (!newSourceName.trim()) {
@@ -212,12 +256,27 @@ export function DataIngestion() {
     }, 1000);
   };
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(5);
+  
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setSelectedFile(e.target.files[0]);
+      setFileError(null);
     }
   };
-
+  
+  // Pagination logic
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = sources.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(sources.length / itemsPerPage);
+  
+  const handlePageChange = (pageNumber: number) => {
+    setCurrentPage(pageNumber);
+  };
+  
   const [processingSourceId, setProcessingSourceId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -303,8 +362,7 @@ export function DataIngestion() {
         </div>
       )}
 
-      <div className="flex justify-between items-center mb-4 md:mb-6">
-        <h1 className="text-2xl font-bold">Data Ingestion</h1>
+      <div className="flex justify-end items-center mb-4 md:mb-6">
         <Dialog open={isAddDialogOpen} onOpenChange={handleDialogChange}>
           <DialogTrigger asChild>
             <Button className="flex items-center gap-2 px-3 md:px-4">
@@ -352,22 +410,53 @@ export function DataIngestion() {
               </div>
               {newSourceType === "File Upload" && (
                 <div className="space-y-2">
-                  <label htmlFor="fileUpload" className="text-sm font-medium">Upload File</label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      id="fileUpload"
-                      type="file"
-                      onChange={(e) => {
-                        handleFileChange(e);
-                        if (e.target.files && e.target.files[0]) setFileError(null);
-                      }}
-                      className={`flex-1 ${fileError ? "border-red-300 focus:ring-red-500" : ""}`}
-                    />
+                  <label className="text-sm font-medium">Upload File</label>
+                  <div 
+                    className={`border-2 border-dashed rounded-md p-6 ${isDragging ? 'border-blue-400 bg-blue-50' : 'border-gray-200'}`}
+                    onDragEnter={handleDragEnter}
+                    onDragLeave={handleDragLeave}
+                    onDragOver={handleDragOver}
+                    onDrop={handleDrop}
+                  >
+                    <div className="flex flex-col items-center justify-center space-y-2 text-center">
+                      <UploadCloud className={`h-8 w-8 ${isDragging ? 'text-blue-500' : 'text-gray-400'}`} />
+                      <div className="text-sm font-medium">
+                        {isDragging ? 'Drop your file here' : 'Drag & drop your file here'}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        or click to browse (PDF, DOCX, TXT, CSV, JSON - max 50MB)
+                      </p>
+                      <Input
+                        type="file"
+                        className="hidden"
+                        id="file-upload"
+                        onChange={handleFileChange}
+                      />
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm" 
+                        className="mt-2"
+                        onClick={() => document.getElementById('file-upload')?.click()}
+                      >
+                        Browse Files
+                      </Button>
+                    </div>
                   </div>
                   {selectedFile ? (
-                    <p className="text-sm text-green-600 flex items-center">
-                      <span className="mr-1">✓</span> Selected: {selectedFile.name}
-                    </p>
+                    <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-md p-2 mt-2">
+                      <div className="flex items-center">
+                        <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
+                        <span className="text-sm font-medium">{selectedFile.name}</span>
+                      </div>
+                      <button 
+                        type="button" 
+                        onClick={() => setSelectedFile(null)}
+                        className="text-gray-500 hover:text-gray-700"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
                   ) : fileError ? (
                     <p className="text-sm text-red-500">{fileError}</p>
                   ) : null}
@@ -538,20 +627,21 @@ export function DataIngestion() {
           <CardTitle className="text-lg">Knowledge Sources</CardTitle>
         </CardHeader>
         <CardContent className="p-0 md:p-2">
-          <Table className="md:table-auto">
-            <TableHeader className="bg-gray-50">
-              <TableRow>
-                <TableHead className="w-[200px] p-3 md:p-4">Source Name</TableHead>
-                <TableHead className="w-[120px] p-3 md:p-4">Type</TableHead>
-                <TableHead className="w-[100px] p-3 md:p-4">Status</TableHead>
-                <TableHead className="w-[180px] p-3 md:p-4">Source Details</TableHead>
-                <TableHead className="w-[150px] p-3 md:p-4">Last Ingested</TableHead>
-                <TableHead className="w-[100px] text-right p-3 md:p-4">Record Count</TableHead>
-                <TableHead className="w-[150px] text-right p-3 md:p-4">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sources.length === 0 ? (
+          <div className="overflow-x-auto max-h-[600px]">
+            <Table className="md:table-auto">
+              <TableHeader className="bg-gray-50 sticky top-0 z-10">
+                <TableRow>
+                  <TableHead className="w-[200px] p-3 md:p-4">Source Name</TableHead>
+                  <TableHead className="w-[120px] p-3 md:p-4">Type</TableHead>
+                  <TableHead className="w-[100px] p-3 md:p-4">Status</TableHead>
+                  <TableHead className="w-[180px] p-3 md:p-4">Source Details</TableHead>
+                  <TableHead className="w-[150px] p-3 md:p-4">Last Ingested</TableHead>
+                  <TableHead className="w-[100px] text-right p-3 md:p-4">Record Count</TableHead>
+                  <TableHead className="w-[150px] text-right p-3 md:p-4">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sources.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="py-8 md:py-12">
                     <div className="flex flex-col items-center justify-center text-center space-y-6">
@@ -577,7 +667,7 @@ export function DataIngestion() {
                   </TableCell>
                 </TableRow>
               ) : (
-                sources.map((source) => (
+                currentItems.map((source) => (
                   <TableRow key={source.id}>
                     <TableCell className="font-medium p-3 md:p-4">{source.name}</TableCell>
                     <TableCell>
@@ -680,9 +770,139 @@ export function DataIngestion() {
                     </TableCell>
                   </TableRow>
                 ))
-              )}
-            </TableBody>
-          </Table>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          
+          {/* Pagination */}
+          {sources.length > itemsPerPage && (
+            <div className="py-4 border-t border-gray-200">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                  Showing <span className="font-medium">{indexOfFirstItem + 1}</span> to{" "}
+                  <span className="font-medium">{Math.min(indexOfLastItem, sources.length)}</span>{" "}
+                  of <span className="font-medium">{sources.length}</span> results
+                </p>
+              </div>
+              
+              <Pagination className="mt-2">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious 
+                      href="#" 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (currentPage > 1) handlePageChange(currentPage - 1);
+                      }} 
+                      aria-disabled={currentPage === 1}
+                      className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+                    />
+                  </PaginationItem>
+                  
+                  {totalPages <= 7 ? (
+                    // Show all pages if there are 7 or fewer
+                    Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <PaginationItem key={page}>
+                        <PaginationLink 
+                          href="#" 
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handlePageChange(page);
+                          }}
+                          isActive={currentPage === page}
+                        >
+                          {page}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ))
+                  ) : (
+                    // Show pagination with ellipsis for more than 7 pages
+                    <>
+                      {/* First page */}
+                      <PaginationItem>
+                        <PaginationLink 
+                          href="#" 
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handlePageChange(1);
+                          }}
+                          isActive={currentPage === 1}
+                        >
+                          1
+                        </PaginationLink>
+                      </PaginationItem>
+                      
+                      {/* Show ellipsis if current page is > 3 */}
+                      {currentPage > 3 && (
+                        <PaginationItem>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      )}
+                      
+                      {/* Pages around current page */}
+                      {Array.from({ length: totalPages }, (_, i) => i + 1)
+                        .filter(page => {
+                          if (totalPages <= 7) return true;
+                          if (page === 1 || page === totalPages) return false;
+                          if (currentPage <= 3) return page <= 5;
+                          if (currentPage >= totalPages - 2) return page >= totalPages - 4;
+                          return page >= currentPage - 1 && page <= currentPage + 1;
+                        })
+                        .map(page => (
+                          <PaginationItem key={page}>
+                            <PaginationLink 
+                              href="#" 
+                              onClick={(e) => {
+                                e.preventDefault();
+                                handlePageChange(page);
+                              }}
+                              isActive={currentPage === page}
+                            >
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        ))
+                      }
+                      
+                      {/* Show ellipsis if current page is < totalPages - 2 */}
+                      {currentPage < totalPages - 2 && (
+                        <PaginationItem>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      )}
+                      
+                      {/* Last page */}
+                      <PaginationItem>
+                        <PaginationLink 
+                          href="#" 
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handlePageChange(totalPages);
+                          }}
+                          isActive={currentPage === totalPages}
+                        >
+                          {totalPages}
+                        </PaginationLink>
+                      </PaginationItem>
+                    </>
+                  )}
+                  
+                  <PaginationItem>
+                    <PaginationNext 
+                      href="#" 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (currentPage < totalPages) handlePageChange(currentPage + 1);
+                      }} 
+                      aria-disabled={currentPage === totalPages}
+                      className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
         </CardContent>
       </Card>
 
