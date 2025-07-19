@@ -8,7 +8,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Loader2, RefreshCw, FileText, Trash2, Eye, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, RefreshCw, FileText, Trash2, Eye, AlertCircle } from "lucide-react";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { useToast } from "@/components/ui/use-toast";
 import { formatDistanceToNow, format } from "date-fns";
 
@@ -160,7 +169,7 @@ export function IngestedDataList() {
     <Card className="w-full shadow-xl border-0 rounded-xl overflow-hidden bg-card mx-auto">
       <CardHeader className="flex flex-row items-center justify-between bg-muted/30 px-6 py-5 border-b">
         <div>
-          <CardTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent drop-shadow-sm">Document Repository</CardTitle>
+          <CardTitle className="text-2xl">Document Repository</CardTitle>
           <CardDescription className="text-muted-foreground mt-1.5">Browse and manage processed files in your knowledge base</CardDescription>
         </div>
         <Button 
@@ -263,43 +272,100 @@ export function IngestedDataList() {
             </Table>
             
             {/* Pagination */}
-            {ingestedData.length > 0 && (
-              <div className="flex items-center justify-between px-6 py-4 bg-muted/20 border-t">
-                <div className="text-sm text-muted-foreground">
-                  Showing {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, ingestedData.length)} of {ingestedData.length} items
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    disabled={currentPage === 1}
-                    className="h-8 w-8 p-0"
-                  >
-                    <span className="sr-only">Previous Page</span>
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                    <Button
-                      key={page}
-                      variant={currentPage === page ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => handlePageChange(page)}
-                      className={`h-8 w-8 p-0 ${currentPage === page ? 'bg-primary text-primary-foreground' : ''}`}
-                    >
-                      {page}
-                    </Button>
-                  ))}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    disabled={currentPage === totalPages || totalPages === 0}
-                    className="h-8 w-8 p-0"
-                  >
-                    <span className="sr-only">Next Page</span>
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
+            {ingestedData.length > itemsPerPage && (
+              <div className="px-6 py-4 bg-muted/20 border-t">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-muted-foreground">
+                    Showing {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, ingestedData.length)} of {ingestedData.length} items
+                  </div>
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious 
+                          href="#" 
+                          onClick={(e) => {
+                            e.preventDefault();
+                            if (currentPage > 1) handlePageChange(currentPage - 1);
+                          }} 
+                          aria-disabled={currentPage === 1}
+                          className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+                        />
+                      </PaginationItem>
+                      
+                      {/* Show first page if not in first few pages */}
+                      {currentPage > 3 && (
+                        <>
+                          <PaginationItem>
+                            <PaginationLink href="#" onClick={(e) => { e.preventDefault(); handlePageChange(1); }}>
+                              1
+                            </PaginationLink>
+                          </PaginationItem>
+                          {currentPage > 4 && (
+                            <PaginationItem>
+                              <PaginationEllipsis />
+                            </PaginationItem>
+                          )}
+                        </>
+                      )}
+                      
+                      {/* Show pages around current page */}
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        let pageNumber;
+                        if (totalPages <= 5) {
+                          pageNumber = i + 1;
+                        } else if (currentPage <= 3) {
+                          pageNumber = i + 1;
+                        } else if (currentPage >= totalPages - 2) {
+                          pageNumber = totalPages - 4 + i;
+                        } else {
+                          pageNumber = currentPage - 2 + i;
+                        }
+                        
+                        if (pageNumber > 0 && pageNumber <= totalPages) {
+                          return (
+                            <PaginationItem key={pageNumber}>
+                              <PaginationLink 
+                                href="#" 
+                                onClick={(e) => { e.preventDefault(); handlePageChange(pageNumber); }}
+                                isActive={currentPage === pageNumber}
+                              >
+                                {pageNumber}
+                              </PaginationLink>
+                            </PaginationItem>
+                          );
+                        }
+                        return null;
+                      })}
+                      
+                      {/* Show last page if not in last few pages */}
+                      {currentPage < totalPages - 2 && (
+                        <>
+                          {currentPage < totalPages - 3 && (
+                            <PaginationItem>
+                              <PaginationEllipsis />
+                            </PaginationItem>
+                          )}
+                          <PaginationItem>
+                            <PaginationLink href="#" onClick={(e) => { e.preventDefault(); handlePageChange(totalPages); }}>
+                              {totalPages}
+                            </PaginationLink>
+                          </PaginationItem>
+                        </>
+                      )}
+                      
+                      <PaginationItem>
+                        <PaginationNext 
+                          href="#" 
+                          onClick={(e) => {
+                            e.preventDefault();
+                            if (currentPage < totalPages) handlePageChange(currentPage + 1);
+                          }} 
+                          aria-disabled={currentPage === totalPages}
+                          className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
                 </div>
               </div>
             )}
@@ -334,7 +400,7 @@ export function IngestedDataList() {
                 </div>
                 <div>
                   <h4 className="text-sm font-medium text-muted-foreground">Status</h4>
-                  <p>{getStatusBadge(selectedDocument.status)}</p>
+                  <div>{getStatusBadge(selectedDocument.status)}</div>
                 </div>
                 <div>
                   <h4 className="text-sm font-medium text-muted-foreground">Document ID</h4>

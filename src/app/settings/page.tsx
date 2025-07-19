@@ -38,7 +38,8 @@ export default function SettingsPage() {
     apiKey, 
     azureApiEndpoint, 
     azureDeploymentName, 
-    azureApiVersion, 
+    azureApiVersion,
+    azureEmbeddingModel, 
     setSelectedProvider,
     setSelectedModelId, 
     setApiKey, 
@@ -53,12 +54,13 @@ export default function SettingsPage() {
   const [tempAzureEndpoint, setTempAzureEndpoint] = useState(azureApiEndpoint || '');
   const [tempAzureDeployment, setTempAzureDeployment] = useState(azureDeploymentName || '');
   const [tempAzureApiVersion, setTempAzureApiVersion] = useState(azureApiVersion || '2023-12-01-preview');
+  const [tempAzureEmbeddingModel, setTempAzureEmbeddingModel] = useState(azureEmbeddingModel || '');
   const [isApiKeyVisible, setIsApiKeyVisible] = useState(false);
   const [apiKeyError, setApiKeyError] = useState<string | null>(null);
   const [azureEndpointError, setAzureEndpointError] = useState<string | null>(null);
   const [azureDeploymentError, setAzureDeploymentError] = useState<string | null>(null);
   const [availableModels, setAvailableModels] = useState<ModelOption[]>(getAvailableModels());
-  
+  const [hoveredModel, setHoveredModel] = useState<ModelOption | null>(null);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -213,6 +215,7 @@ export default function SettingsPage() {
   // Handle model change
   const handleModelChange = (value: string) => {
     setTempModelId(value);
+    setHoveredModel(null); // Clear hover panel when selection is made
   };
 
   const handleSaveSettings = () => {
@@ -268,7 +271,8 @@ export default function SettingsPage() {
       setAzureConfig({
         endpoint: tempAzureEndpoint,
         deploymentName: tempAzureDeployment,
-        apiVersion: tempAzureApiVersion
+        apiVersion: tempAzureApiVersion,
+        embeddingModel: tempAzureEmbeddingModel
       });
     }
     
@@ -279,21 +283,22 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="container flex flex-col items-center justify-center py-8">
-      <div className="w-full max-w-2xl">
-        <div className="flex items-center gap-2 mb-8">
-          <Settings className="h-6 w-6 text-primary" />
-          <h1 className="text-3xl font-bold">Settings</h1>
-        </div>
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto py-8">
+        <div className="w-full max-w-2xl mx-auto">
+          <div className="flex items-center gap-2 mb-8 h-12"> 
+            <Settings className="h-6 w-6 text-primary" />
+            <h1 className="text-3xl font-bold">Settings</h1>
+          </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>LLM Configuration</CardTitle>
-            <CardDescription>
-              Configure your preferred LLM model and API key. Your API key is stored locally in your browser.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
+          <Card className="flex flex-col h-[calc(100vh-200px)]">
+            <CardHeader className="flex-shrink-0">
+              <CardTitle>LLM Configuration</CardTitle>
+              <CardDescription>
+                Configure your preferred LLM model and API key. Your API key is stored locally in your browser.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6 flex-1 overflow-y-auto min-h-0 pr-2">
             <div className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="provider">LLM Provider</Label>
@@ -317,20 +322,67 @@ export default function SettingsPage() {
                   className="space-y-2 animate-in fade-in slide-in-from-top-5 duration-300"
                   key={tempProvider} // Key helps React properly animate when provider changes
                 >
-                  <Label htmlFor="model">Model</Label>
-                  <Select value={tempModelId} onValueChange={handleModelChange}>
-                    <SelectTrigger id="model">
-                      <SelectValue placeholder="Select a model" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableModels.map((model) => (
-                        <SelectItem key={model.id} value={model.id}>{model.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Select the specific model from {providerNames[tempProvider]}
-                  </p>
+                  <div className="space-y-2 relative">
+                    <Label htmlFor="model">Model</Label>
+                    <div className="relative">
+                      <Select value={tempModelId} onValueChange={handleModelChange}>
+                        <SelectTrigger id="model">
+                          <SelectValue placeholder="Select a model" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableModels.map((model) => (
+                            <SelectItem 
+                              key={model.id} 
+                              value={model.id}
+                              onMouseEnter={() => setHoveredModel(model)}
+                              onMouseLeave={() => setHoveredModel(null)}
+                              className="relative"
+                            >
+                              {model.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      
+                      {/* Model Details Hover Panel - Positioned outside settings border */}
+                      {hoveredModel && (
+                        <div 
+                          className="fixed left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[9999] w-80 bg-background border border-border rounded-lg shadow-2xl p-4 animate-in fade-in zoom-in-95 duration-200"
+                          onMouseEnter={() => setHoveredModel(hoveredModel)}
+                          onMouseLeave={() => setHoveredModel(null)}
+                        >
+                          <div className="space-y-3">
+                            <div className="border-b border-border pb-2">
+                              <h3 className="font-semibold text-foreground text-lg">{hoveredModel.name}</h3>
+                              {hoveredModel.description && (
+                                <p className="text-sm text-muted-foreground mt-1">{hoveredModel.description}</p>
+                              )}
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm font-medium text-muted-foreground">Context</span>
+                                <span className="text-sm font-mono text-foreground">{hoveredModel.contextLength.toLocaleString()} tokens</span>
+                              </div>
+                              
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm font-medium text-muted-foreground">Input Pricing</span>
+                                <span className="text-sm font-mono text-foreground">${hoveredModel.inputPricing.toFixed(2)} / million tokens</span>
+                              </div>
+                              
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm font-medium text-muted-foreground">Output Pricing</span>
+                                <span className="text-sm font-mono text-foreground">${hoveredModel.outputPricing.toFixed(2)} / million tokens</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Select the specific model from {providerNames[tempProvider]}
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
@@ -348,11 +400,11 @@ export default function SettingsPage() {
                       value={tempApiKey}
                       onChange={handleApiKeyChange}
                       placeholder={`Enter your ${providerNames[tempProvider]} API key`}
-                      className={`pr-10 ${apiKeyError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                      className={`pr-10 ${apiKeyError ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                     />
                     <button
                       type="button"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                       onClick={() => setIsApiKeyVisible(!isApiKeyVisible)}
                     >
                       <Key className="h-4 w-4" />
@@ -360,7 +412,7 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 {apiKeyError && (
-                  <p className="text-xs text-red-500 mt-1">
+                  <p className="text-xs text-destructive mt-1">
                     {apiKeyError}
                   </p>
                 )}
@@ -374,13 +426,13 @@ export default function SettingsPage() {
             {tempProvider === 'azure' && (
               <div 
                 id="azure-config-section" 
-                className="space-y-4 mt-4 p-4 border border-blue-200 bg-blue-50 rounded-md shadow-sm
+                className="space-y-4 mt-4 p-4 border border-primary/20 bg-primary/5 rounded-md shadow-sm
                          animate-in fade-in slide-in-from-top-5 duration-300"
                 key="azure-config"
               >
                 <div className="flex items-center gap-2 mb-2">
-                  <Cloud className="h-5 w-5 text-blue-500" />
-                  <h3 className="text-lg font-medium">Azure OpenAI Configuration</h3>
+                  <Cloud className="h-5 w-5 text-primary" />
+                  <h3 className="text-lg font-medium text-foreground">Azure OpenAI Configuration</h3>
                 </div>
                 
                 <div className="space-y-2">
@@ -390,10 +442,10 @@ export default function SettingsPage() {
                     value={tempAzureEndpoint}
                     onChange={handleAzureEndpointChange}
                     placeholder="https://your-resource-name.openai.azure.com/"
-                    className={azureEndpointError ? 'border-red-500 focus-visible:ring-red-500' : ''}
+                    className={azureEndpointError ? 'border-destructive focus-visible:ring-destructive' : ''}
                   />
                   {azureEndpointError && (
-                    <p className="text-xs text-red-500 mt-1">{azureEndpointError}</p>
+                    <p className="text-xs text-destructive mt-1">{azureEndpointError}</p>
                   )}
                   <p className="text-xs text-muted-foreground mt-1">
                     The endpoint URL for your Azure OpenAI resource
@@ -407,10 +459,10 @@ export default function SettingsPage() {
                     value={tempAzureDeployment}
                     onChange={handleAzureDeploymentChange}
                     placeholder="your-deployment-name"
-                    className={azureDeploymentError ? 'border-red-500 focus-visible:ring-red-500' : ''}
+                    className={azureDeploymentError ? 'border-destructive focus-visible:ring-destructive' : ''}
                   />
                   {azureDeploymentError && (
-                    <p className="text-xs text-red-500 mt-1">{azureDeploymentError}</p>
+                    <p className="text-xs text-destructive mt-1">{azureDeploymentError}</p>
                   )}
                   <p className="text-xs text-muted-foreground mt-1">
                     The name of your Azure OpenAI model deployment
@@ -433,6 +485,19 @@ export default function SettingsPage() {
                     The Azure OpenAI API version to use
                   </p>
                 </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="azureEmbeddingModel">Embedding Model Deployment</Label>
+                  <Input
+                    id="azureEmbeddingModel"
+                    value={tempAzureEmbeddingModel}
+                    onChange={(e) => setTempAzureEmbeddingModel(e.target.value)}
+                    placeholder="text-embedding-ada-002"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    The name of your Azure OpenAI embedding model deployment (e.g., text-embedding-ada-002)
+                  </p>
+                </div>
               </div>
             )}
           </CardContent>
@@ -443,6 +508,7 @@ export default function SettingsPage() {
             </Button>
           </CardFooter>
         </Card>
+        </div>
       </div>
     </div>
   );

@@ -349,27 +349,40 @@ export function DataIngestion() {
   };
 
   return (
-    <div className="container mx-auto py-6 px-4 md:px-6 lg:px-8 space-y-6">
+    <div className="w-full h-full flex flex-col bg-gradient-to-br from-slate-50 to-blue-50/30">
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md mb-4 flex items-center justify-between">
-          <div className="flex items-center">
-            <X className="h-5 w-5 mr-2" />
-            <span>{error}</span>
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg shadow-sm">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+              <p className="text-sm font-medium text-red-800">{error}</p>
+            </div>
+            <button onClick={() => setError(null)} className="text-red-500 hover:text-red-700 transition-colors">
+              <X className="h-4 w-4" />
+            </button>
           </div>
-          <button onClick={() => setError(null)} className="text-red-500 hover:text-red-700">
-            <X className="h-4 w-4" />
-          </button>
         </div>
       )}
 
-      <div className="flex justify-end items-center mb-4 md:mb-6">
-        <Dialog open={isAddDialogOpen} onOpenChange={handleDialogChange}>
-          <DialogTrigger asChild>
-            <Button className="flex items-center gap-2 px-3 md:px-4">
-              <Plus className="h-4 w-4" />
-              Add New Source
-            </Button>
-          </DialogTrigger>
+      <div className="flex-1 flex flex-col min-h-0" style={{ overflowY: 'auto' }}>
+        <Card className="flex-1 border-0 shadow-lg bg-card/80 backdrop-blur-sm flex flex-col">
+          <CardHeader className="pb-6 border-b border-border flex-shrink-0">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+              <div className="space-y-2">
+                <CardTitle className="text-2xl">
+                  Data Ingestion
+                </CardTitle>
+                <p className="text-muted-foreground text-lg leading-relaxed max-w-2xl">
+                  Seamlessly manage your knowledge base data sources and streamline content ingestion workflows
+                </p>
+              </div>
+            <Dialog open={isAddDialogOpen} onOpenChange={handleDialogChange}>
+              <DialogTrigger asChild>
+                <Button className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
+                  <Plus className="h-5 w-5" />
+                  Add New Source
+                </Button>
+              </DialogTrigger>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>Add New Ingestion Source</DialogTitle>
@@ -620,171 +633,195 @@ export function DataIngestion() {
             </div>
           </DialogContent>
         </Dialog>
-      </div>
-
-      <Card className="overflow-hidden shadow-sm md:rounded-lg">
-        <CardHeader className="bg-gray-50 p-4 md:p-6 dark:bg-gray-800/50">
-          <CardTitle className="text-lg">Knowledge Sources</CardTitle>
+          </div>
         </CardHeader>
-        <CardContent className="p-0 md:p-2">
-          <div className="overflow-x-auto max-h-[600px]">
-            <Table className="md:table-auto">
-              <TableHeader className="bg-gray-50 sticky top-0 z-10">
-                <TableRow>
-                  <TableHead className="w-[200px] p-3 md:p-4">Source Name</TableHead>
-                  <TableHead className="w-[120px] p-3 md:p-4">Type</TableHead>
-                  <TableHead className="w-[100px] p-3 md:p-4">Status</TableHead>
-                  <TableHead className="w-[180px] p-3 md:p-4">Source Details</TableHead>
-                  <TableHead className="w-[150px] p-3 md:p-4">Last Ingested</TableHead>
-                  <TableHead className="w-[100px] text-right p-3 md:p-4">Record Count</TableHead>
-                  <TableHead className="w-[150px] text-right p-3 md:p-4">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
+          <CardContent className="p-6 flex flex-col h-full">
+            {/* Main Content Area with Fixed Height */}
+            <div className="flex flex-col h-full">
+              {/* Table Container - Scrollable */}
+              <div className="rounded-xl border border-border bg-card shadow-sm flex-1 overflow-hidden">
+                <div className="h-full overflow-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-muted [&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-muted-foreground/50">
+              <Table>
+                <TableHeader className="sticky top-0 z-10">
+                  <TableRow className="bg-muted/50 border-b border-border">
+                    <TableHead className="font-semibold text-foreground p-4 text-sm uppercase tracking-wide">Name</TableHead>
+                    <TableHead className="font-semibold text-foreground text-sm uppercase tracking-wide">Type</TableHead>
+                    <TableHead className="font-semibold text-foreground text-sm uppercase tracking-wide">Status</TableHead>
+                    <TableHead className="font-semibold text-foreground text-sm uppercase tracking-wide">Connection</TableHead>
+                    <TableHead className="font-semibold text-foreground text-sm uppercase tracking-wide">Last Ingested</TableHead>
+                    <TableHead className="font-semibold text-foreground text-right text-sm uppercase tracking-wide">Records</TableHead>
+                    <TableHead className="font-semibold text-foreground text-right text-sm uppercase tracking-wide">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
               <TableBody>
                 {sources.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="py-8 md:py-12">
-                    <div className="flex flex-col items-center justify-center text-center space-y-6">
-                      <div className="bg-orange-50 p-4 md:p-5 rounded-full">
-                        <Database className="h-10 w-10 text-orange-500" />
-                      </div>
-                      <div className="space-y-2 px-2 md:px-4">
-                        <h3 className="text-xl font-semibold text-gray-900">Data Ingestion</h3>
-                        <p className="text-gray-500 max-w-md mx-auto px-2 md:px-4">
-                          Upload and manage your knowledge base data sources.
-                          Import documents, websites, and other content to train your
-                          AI assistant.
-                        </p>
-                      </div>
-                      <Button 
-                        onClick={() => setIsAddDialogOpen(true)} 
-                        className="mt-2 flex items-center gap-2 px-3 md:px-4"
-                      >
-                        <Plus className="h-4 w-4" />
-                        Add New Source
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                currentItems.map((source) => (
-                  <TableRow key={source.id}>
-                    <TableCell className="font-medium p-3 md:p-4">{source.name}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {getTypeIcon(source.type)}
-                        <span>{source.type}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="p-3 md:p-4">{getStatusBadge(source.status)}</TableCell>
-                    <TableCell>
-                      {["JIRA", "Confluence", "ADO", "API Endpoint", "Database"].includes(source.type) && source.url ? (
-                        <div className="text-xs">
-                          <div className="flex items-center gap-1 truncate max-w-[180px]" title={source.url}>
-                            <Link className="h-3 w-3" />
-                            <span className="truncate">{source.url}</span>
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-16">
+                      <div className="flex flex-col items-center justify-center space-y-6">
+                        <div className="relative">
+                          <div className="rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 p-8 shadow-lg">
+                            <Database className="h-16 w-16 text-primary" />
                           </div>
-                          {source.username && (
-                            <div className="text-gray-500 mt-1">
-                              User: {source.username}
-                            </div>
-                          )}
+                          <div className="absolute -top-2 -right-2 w-6 h-6 bg-gradient-to-r from-primary to-secondary rounded-full flex items-center justify-center">
+                            <Plus className="h-3 w-3 text-primary-foreground" />
+                          </div>
                         </div>
-                      ) : (
-                        <span className="text-gray-500">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {source.lastIngested 
-                        ? formatDistanceToNow(new Date(source.lastIngested), { addSuffix: true }) 
-                        : "Never"}
-                    </TableCell>
-                    <TableCell className="text-right">{source.recordCount ?? "-"}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
+                        <div className="space-y-3 max-w-md mx-auto">
+                          <h3 className="text-2xl font-bold text-foreground">Start Building Your Knowledge Base</h3>
+                          <p className="text-muted-foreground leading-relaxed">
+                            Connect your data sources to create a comprehensive knowledge base.
+                            Upload documents, integrate APIs, or connect databases to get started.
+                          </p>
+                        </div>
                         <Button 
-                          size="sm" 
-                          variant="outline" 
-                          className="h-8 px-2 text-gray-600"
-                          onClick={() => {
-                            setTrackingSourceId(source.id);
-                            setIsTrackingModalOpen(true);
-                          }}
+                          onClick={() => setIsAddDialogOpen(true)} 
+                          className="mt-4 flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5"
                         >
-                          <FileText className="h-4 w-4 mr-1" />
-                          Details
+                          <Plus className="h-5 w-5" />
+                          Add Your First Source
                         </Button>
-                        
-                        {source.status === "Ready" || source.status === "Completed" || source.status === "Failed" ? (
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            className={`h-8 px-2 ${processingSourceId === source.id ? "bg-blue-50" : ""} 
-                              ${source.status === "Failed" ? "text-orange-600" : "text-blue-600"}`}
-                            onClick={() => handleStartIngestion(source.id)}
-                            disabled={processingSourceId !== null}
-                          >
-                            {processingSourceId === source.id ? (
-                              <RefreshCw className="h-4 w-4 mr-1 animate-spin" />
-                            ) : source.status === "Completed" ? (
-                              <RefreshCw className="h-4 w-4 mr-1" />
-                            ) : source.status === "Failed" ? (
-                              <RefreshCw className="h-4 w-4 mr-1" />
-                            ) : (
-                              <Play className="h-4 w-4 mr-1" />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+              ) : (
+                  currentItems.map((source, index) => (
+                    <TableRow key={source.id} className="bg-card hover:bg-muted/50 transition-colors duration-150 border-b border-border last:border-b-0">
+                      <TableCell className="font-semibold p-4 text-foreground">{source.name}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-muted">
+                            {getTypeIcon(source.type)}
+                          </div>
+                          <span className="font-medium text-foreground">{source.type}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="p-4">{getStatusBadge(source.status)}</TableCell>
+                      <TableCell>
+                        {["JIRA", "Confluence", "ADO", "API Endpoint", "Database"].includes(source.type) && source.url ? (
+                          <div className="text-sm space-y-1">
+                            <div className="flex items-center gap-2 truncate max-w-[200px]" title={source.url}>
+                              <div className="p-1 rounded bg-primary/20">
+                                <Link className="h-3 w-3 text-primary" />
+                              </div>
+                              <span className="truncate font-mono text-muted-foreground">{source.url}</span>
+                            </div>
+                            {source.username && (
+                              <div className="text-muted-foreground text-xs pl-6">
+                                User: <span className="font-medium">{source.username}</span>
+                              </div>
                             )}
-                            {processingSourceId === source.id ? "Processing..." : 
-                              source.status === "Completed" ? "Re-ingest" : 
-                              source.status === "Failed" ? "Retry" : "Start Ingestion"}
-                          </Button>
-                        ) : source.status === "Processing" ? (
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 font-medium">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <span className={`text-sm font-medium ${
+                          source.lastIngested ? 'text-slate-600' : 'text-slate-400'
+                        }`}>
+                          {source.lastIngested 
+                            ? formatDistanceToNow(new Date(source.lastIngested), { addSuffix: true }) 
+                            : "Never"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <span className={`text-sm font-semibold ${
+                          source.recordCount ? 'text-slate-800' : 'text-slate-400'
+                        }`}>
+                          {source.recordCount ? source.recordCount.toLocaleString() : "—"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
                           <Button 
                             size="sm" 
                             variant="outline" 
-                            className="h-8 px-2 bg-yellow-50 text-yellow-600"
-                            disabled
+                            className="h-9 px-3 text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all duration-150"
+                            onClick={() => {
+                              setTrackingSourceId(source.id);
+                              setIsTrackingModalOpen(true);
+                            }}
                           >
-                            <RefreshCw className="h-4 w-4 mr-1 animate-spin" />
-                            Processing...
+                            <FileText className="h-4 w-4 mr-2" />
+                            Details
                           </Button>
-                        ) : null}
-                        <Button 
-                          size="sm" 
-                          variant="ghost" 
-                          className="h-8 w-8 p-0 text-blue-600"
-                          onClick={() => handleEditSource(source)}
-                          disabled={processingSourceId === source.id || source.status === "Processing"}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="ghost" 
-                          className="h-8 w-8 p-0 text-red-600"
-                          onClick={() => deleteSource(source.id)}
-                          disabled={processingSourceId === source.id || source.status === "Processing"}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
+                        
+                          {source.status === "Ready" || source.status === "Completed" || source.status === "Failed" ? (
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className={`h-9 px-3 transition-all duration-150 ${
+                                processingSourceId === source.id 
+                                  ? "bg-blue-50 border-blue-200 text-blue-700" 
+                                  : source.status === "Failed" 
+                                    ? "text-orange-600 border-orange-200 hover:bg-orange-50" 
+                                    : "text-blue-600 border-blue-200 hover:bg-blue-50"
+                              }`}
+                              onClick={() => handleStartIngestion(source.id)}
+                              disabled={processingSourceId !== null}
+                            >
+                              {processingSourceId === source.id ? (
+                                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                              ) : source.status === "Completed" ? (
+                                <RefreshCw className="h-4 w-4 mr-2" />
+                              ) : source.status === "Failed" ? (
+                                <RefreshCw className="h-4 w-4 mr-2" />
+                              ) : (
+                                <Play className="h-4 w-4 mr-2" />
+                              )}
+                              {processingSourceId === source.id ? "Processing..." : 
+                                source.status === "Completed" ? "Re-ingest" : 
+                                source.status === "Failed" ? "Retry" : "Start Ingestion"}
+                            </Button>
+                          ) : source.status === "Processing" ? (
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="h-9 px-3 bg-amber-50 border-amber-200 text-amber-700"
+                              disabled
+                            >
+                              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                              Processing...
+                            </Button>
+                          ) : null}
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            className="h-9 w-9 p-0 text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition-all duration-150"
+                            onClick={() => handleEditSource(source)}
+                            disabled={processingSourceId === source.id || source.status === "Processing"}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            className="h-9 w-9 p-0 text-slate-600 hover:text-red-600 hover:bg-red-50 transition-all duration-150"
+                            onClick={() => deleteSource(source.id)}
+                            disabled={processingSourceId === source.id || source.status === "Processing"}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
                       </div>
                     </TableCell>
                   </TableRow>
                 ))
                 )}
-              </TableBody>
-            </Table>
-          </div>
-          
-          {/* Pagination */}
-          {sources.length > itemsPerPage && (
-            <div className="py-4 border-t border-gray-200">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">
-                  Showing <span className="font-medium">{indexOfFirstItem + 1}</span> to{" "}
-                  <span className="font-medium">{Math.min(indexOfLastItem, sources.length)}</span>{" "}
-                  of <span className="font-medium">{sources.length}</span> results
-                </p>
+                </TableBody>
+                </Table>
+                </div>
               </div>
+              
+              {/* Pagination Footer - Always visible */}
+              {sources.length > itemsPerPage && (
+              <div className="mt-4 py-4 border-t border-border bg-muted/30 rounded-b-xl flex-shrink-0">
+                <div className="flex items-center justify-between px-6">
+                  <p className="text-sm text-muted-foreground font-medium">
+                    Showing <span className="font-semibold text-foreground">{indexOfFirstItem + 1}</span> to{" "}
+                    <span className="font-semibold text-foreground">{Math.min(indexOfLastItem, sources.length)}</span>{" "}
+                    of <span className="font-semibold text-foreground">{sources.length}</span> results
+                  </p>
+                </div>
               
               <Pagination className="mt-2">
                 <PaginationContent>
@@ -901,10 +938,12 @@ export function DataIngestion() {
                   </PaginationItem>
                 </PaginationContent>
               </Pagination>
+              </div>
+            )} 
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Tracking drawer */}
       <IngestionTrackingDrawer
