@@ -453,7 +453,7 @@ export function AgentMode() {
                     <div className="ml-3">
                       <p className="text-sm font-medium">{item.title}</p>
                       <p className="text-xs text-muted-foreground">
-                        {item.type} • {item.timestamp.toLocaleDateString()}
+                        {item.type} • {new Date(item.timestamp).toLocaleDateString()}
                       </p>
                     </div>
                   </div>

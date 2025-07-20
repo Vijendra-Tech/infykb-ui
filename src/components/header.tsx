@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Search, Edit, Sparkles, RefreshCcw, History, Menu, X, Home, BotIcon, Database, Clock, BarChart, FileText, Settings } from "lucide-react";
+import { Search, Edit, Sparkles, RefreshCcw, History, Menu, X, Home, BotIcon, Database, Clock, BarChart, FileText, Settings, LogOut, LogIn, Users, Building, UserCheck } from "lucide-react";
 import { ModeToggle } from "@/components/mode-toggle";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { useSidebar } from "@/context/sidebar-context";
@@ -11,6 +11,7 @@ import { Logo } from "@/components/ui/logo";
 import { ChatHistory } from "@/components/chat-history";
 import { useChatHistoryStore } from "@/store/use-chat-history-store";
 import { useRoleStore } from "@/store/use-role-store";
+import { useDexieAuthStore } from '@/store/use-dexie-auth-store';
 import { motion, AnimatePresence } from "framer-motion";
 
 interface MobileMenuItemProps {
@@ -63,6 +64,7 @@ export function Header() {
   const pathname = usePathname();
   const { addChat } = useChatHistoryStore();
   const { role } = useRoleStore();
+  const { user, isAuthenticated, logout, isAdmin, isApprover } = useDexieAuthStore();
   
   // Handle responsive view detection
   useEffect(() => {
@@ -95,32 +97,97 @@ export function Header() {
         
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center gap-4">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="rounded-full"
-            onClick={() => setIsChatHistoryOpen(!isChatHistoryOpen)}
-          >
-            <History className="h-5 w-5" />
-            <span className="sr-only">Chat History</span>
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="rounded-full"
-            onClick={() => {
-              addChat({ title: "New Chat" });
-              router.push("/chat");
-            }}
-          >
-            <Edit className="h-5 w-5" />
-            <span className="sr-only">New Chat</span>
-          </Button>
-          <ModeToggle />
-          <UserProfileDropdown
-            userName="Vijendra Rana"
-            userEmail="vijendra.rana@globallogic.com"
-          />
+          {isAuthenticated() ? (
+            <>
+
+              
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="rounded-full"
+                onClick={() => setIsChatHistoryOpen(!isChatHistoryOpen)}
+              >
+                <History className="h-5 w-5" />
+                <span className="sr-only">Chat History</span>
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="rounded-full"
+                onClick={() => {
+                  addChat({ title: "New Chat" });
+                  router.push("/chat");
+                }}
+              >
+                <Edit className="h-5 w-5" />
+                <span className="sr-only">New Chat</span>
+              </Button>
+              <ModeToggle />
+              
+              {/* User Profile with Logout */}
+              <div className="relative">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="flex items-center gap-2 rounded-full"
+                  onClick={() => {
+                    const dropdown = document.getElementById('user-dropdown');
+                    if (dropdown) {
+                      dropdown.classList.toggle('hidden');
+                    }
+                  }}
+                >
+                  <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                    {user?.name?.charAt(0).toUpperCase() || 'U'}
+                  </div>
+                  <span className="hidden lg:block">{user?.name || 'User'}</span>
+                </Button>
+                
+                {/* Dropdown Menu */}
+                <div id="user-dropdown" className="hidden absolute right-0 mt-2 w-48 bg-background border rounded-md shadow-lg z-50">
+                  <div className="py-1">
+                    <div className="px-3 py-2 border-b">
+                      <p className="text-sm font-medium">{user?.name}</p>
+                      <p className="text-xs text-muted-foreground">{user?.email}</p>
+                      <p className="text-xs text-muted-foreground capitalize">{user?.role?.replace('_', ' ')}</p>
+                    </div>
+                    <Link href="/dashboard" className="block px-3 py-2 text-sm hover:bg-muted">
+                      <Home className="h-4 w-4 inline mr-2" />
+                      Dashboard
+                    </Link>
+                    <Link href="/settings" className="block px-3 py-2 text-sm hover:bg-muted">
+                      <Settings className="h-4 w-4 inline mr-2" />
+                      Settings
+                    </Link>
+                    <button
+                      onClick={() => {
+                        logout();
+                        router.push('/auth/login');
+                      }}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-muted text-red-600"
+                    >
+                      <LogOut className="h-4 w-4 inline mr-2" />
+                      Logout
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            /* Not Authenticated - Show Login Button */
+            <>
+              <ModeToggle />
+              <Button 
+                variant="default" 
+                size="sm" 
+                className="rounded-full"
+                onClick={() => router.push('/auth/login')}
+              >
+                <LogIn className="h-4 w-4 mr-2" />
+                Login
+              </Button>
+            </>
+          )}
         </div>
         
         {/* Mobile Menu Button */}
@@ -179,48 +246,82 @@ export function Header() {
                     }
                   }}
                 >
-                  {/* Header Menu Items Only */}
-                  <MobileMenuItem 
-                    icon={<History size={18} />} 
-                    label="Chat History" 
-                    onClick={() => {
-                      setIsChatHistoryOpen(true);
-                      setIsMobileMenuOpen(false);
-                    }}
-                  />
-                  <MobileMenuItem 
-                    icon={<Edit size={18} />} 
-                    label="New Chat" 
-                    onClick={() => {
-                      addChat({ title: "New Chat" });
-                      router.push("/chat");
-                      setIsMobileMenuOpen(false);
-                    }}
-                  />
-                  {/* Premium features menu item removed */}
-                  
-                  <MobileMenuItem 
-                    icon={<Settings size={18} />} 
-                    label="Settings" 
-                    href="/settings"
-                    active={pathname === "/settings"}
-                  />
-                  
-                  <div className="h-px bg-border my-1" />
-                  
-                  <div className="flex items-center justify-between px-3 py-2">
-                    <span className="text-sm font-medium">Theme</span>
-                    <ModeToggle />
-                  </div>
-                  
-                  <div className="h-px bg-border my-1" />
-                  
-                  <div>
-                    <UserProfileDropdown
-                      userName="Vijendra Rana"
-                      userEmail="vijendra.rana@globallogic.com"
-                    />
-                  </div>
+                  {/* Mobile Menu Items */}
+                  {isAuthenticated() ? (
+                    <>
+                      {/* User Info */}
+                      <div className="px-3 py-2 bg-muted/30 rounded-lg mb-3">
+                        <p className="text-sm font-medium">{user?.name}</p>
+                        <p className="text-xs text-muted-foreground">{user?.email}</p>
+                        <p className="text-xs text-muted-foreground capitalize">{user?.role?.replace('_', ' ')}</p>
+                      </div>
+                      
+
+                      
+                      <div className="h-px bg-border my-1" />
+                      
+                      <MobileMenuItem 
+                        icon={<History size={18} />} 
+                        label="Chat History" 
+                        onClick={() => {
+                          setIsChatHistoryOpen(true);
+                          setIsMobileMenuOpen(false);
+                        }}
+                      />
+                      <MobileMenuItem 
+                        icon={<Edit size={18} />} 
+                        label="New Chat" 
+                        onClick={() => {
+                          addChat({ title: "New Chat" });
+                          router.push("/chat");
+                          setIsMobileMenuOpen(false);
+                        }}
+                      />
+                      
+                      <MobileMenuItem 
+                        icon={<Settings size={18} />} 
+                        label="Settings" 
+                        href="/settings"
+                        active={pathname === "/settings"}
+                      />
+                      
+                      <div className="h-px bg-border my-1" />
+                      
+                      <div className="flex items-center justify-between px-3 py-2">
+                        <span className="text-sm font-medium">Theme</span>
+                        <ModeToggle />
+                      </div>
+                      
+                      <div className="h-px bg-border my-1" />
+                      
+                      <MobileMenuItem 
+                        icon={<LogOut size={18} />} 
+                        label="Logout" 
+                        onClick={() => {
+                          logout();
+                          router.push('/auth/login');
+                          setIsMobileMenuOpen(false);
+                        }}
+                      />
+                    </>
+                  ) : (
+                    /* Not Authenticated - Show Login Option */
+                    <>
+                      <MobileMenuItem 
+                        icon={<LogIn size={18} />} 
+                        label="Login" 
+                        href="/auth/login"
+                        active={pathname === "/auth/login"}
+                      />
+                      
+                      <div className="h-px bg-border my-1" />
+                      
+                      <div className="flex items-center justify-between px-3 py-2">
+                        <span className="text-sm font-medium">Theme</span>
+                        <ModeToggle />
+                      </div>
+                    </>
+                  )}
                 </motion.div>
               </div>
             </motion.div>

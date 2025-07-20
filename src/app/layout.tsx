@@ -2,9 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
-import { SidebarProvider } from "@/context/sidebar-context";
-import { Header } from "@/components/header";
-import { Sidebar } from "@/components/sidebar";
+import { LayoutWrapper } from "@/components/layout-wrapper";
 import { Toaster } from "@/components/ui/toaster";
 
 const geistSans = Geist({
@@ -43,16 +41,10 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <SidebarProvider>
-            <div className="flex h-screen overflow-hidden">
-              <Sidebar />
-              <div className="flex flex-col flex-1 overflow-hidden">
-                <Header />
-                {children}
-              </div>
-            </div>
-            <Toaster />
-          </SidebarProvider>
+          <LayoutWrapper>
+            {children}
+          </LayoutWrapper>
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>
