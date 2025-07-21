@@ -8,6 +8,8 @@ interface OrganizationState {
   projects: Project[];
   accessRequests: (AccessRequest & { user: User; project?: Project })[];
   stats: {
+    [x: string]: number;
+    userProjects: number;
     totalMembers: number;
     totalProjects: number;
     pendingRequests: number;
@@ -57,7 +59,8 @@ export const useDexieOrganizationStore = create<OrganizationState>((set, get) =>
     totalMembers: 0,
     totalProjects: 0,
     pendingRequests: 0,
-    activeProjects: 0
+    activeProjects: 0,
+    userProjects: 0
   },
   isLoading: false,
   error: null,

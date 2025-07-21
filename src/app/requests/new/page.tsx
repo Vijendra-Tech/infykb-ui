@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDexieAuthStore } from '@/store/use-dexie-auth-store';
-import { useOrganizationStore } from '@/store/use-organization-store';
+import { useDexieOrganizationStore } from '@/store/use-dexie-organization-store';
+import { Project } from '@/lib/database';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,7 +28,7 @@ import Link from 'next/link';
 export default function NewRequestPage() {
   const router = useRouter();
   const { user, isAuthenticated, isInitialized, isLoading } = useDexieAuthStore();
-  const { projects, fetchProjects, createAccessRequest } = useOrganizationStore();
+  const { projects, loadProjects, createAccessRequest } = useDexieOrganizationStore();
   
   const [formData, setFormData] = useState({
     requestType: '',
@@ -53,8 +54,8 @@ export default function NewRequestPage() {
       return;
     }
     
-    fetchProjects();
-  }, [user, isInitialized, isLoading, router, fetchProjects]);
+    loadProjects();
+  }, [user, isInitialized, isLoading, router, loadProjects]);
 
   const requestTypes = [
     { value: 'project_access', label: 'Project Access', icon: Database, description: 'Request access to a specific project' },
@@ -99,8 +100,9 @@ export default function NewRequestPage() {
       }
 
       const requestData = {
+        userId: user?.uuid || '',
         requestType: formData.requestType as any,
-        projectId: formData.projectId || undefined,
+        projectId: formData.projectId || '',
         requestedRole: formData.requestedRole || undefined,
         requestedPermissions: formData.requestedPermissions.length > 0 ? formData.requestedPermissions : undefined,
         message: formData.message || undefined
@@ -231,7 +233,7 @@ export default function NewRequestPage() {
                         <SelectValue placeholder="Select project" />
                       </SelectTrigger>
                       <SelectContent>
-                        {projects.map((project) => (
+                        {projects.map((project: Project) => (
                           <SelectItem key={project.uuid} value={project.uuid}>
                             <div>
                               <div className="font-medium">{project.name}</div>

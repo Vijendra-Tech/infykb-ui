@@ -112,17 +112,17 @@ export default function DashboardPage() {
       };
     } else if (isApprover()) {
       return {
-        totalProjects: stats?.userProjects || 3,
-        totalMembers: stats?.teamMembers || 8,
+        totalProjects: stats?.totalProjects || 3,
+        totalMembers: stats?.totalMembers || 8,
         pendingRequests: stats?.pendingRequests || mockStats.pendingRequests,
-        activeProjects: stats?.userProjects || 2,
+        activeProjects: stats?.activeProjects || 2,
       };
     } else {
       return {
-        totalProjects: stats?.userProjects || 2,
-        totalMembers: stats?.teamMembers || 5,
+        totalProjects: stats?.totalProjects || 2,
+        totalMembers: stats?.totalMembers || 5,
         pendingRequests: 0, // Members don't see pending requests
-        activeProjects: stats?.userProjects || 1,
+        activeProjects: stats?.activeProjects || 1,
       };
     }
   };

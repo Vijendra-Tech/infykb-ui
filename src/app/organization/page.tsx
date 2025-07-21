@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDexieAuthStore } from '@/store/use-dexie-auth-store';
-import { useOrganizationStore } from '@/store/use-organization-store';
+import { useDexieOrganizationStore } from '@/store/use-dexie-organization-store';
+import { User, Project, AccessRequest } from '@/lib/database';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -34,10 +35,12 @@ export default function OrganizationPage() {
     members, 
     projects, 
     accessRequests,
-    fetchMembers, 
-    fetchProjects, 
-    fetchAccessRequests 
-  } = useOrganizationStore();
+    loadMembers, 
+    loadProjects, 
+    loadAccessRequests,
+    isLoading: storeLoading,
+    error: storeError 
+  } = useDexieOrganizationStore();
   
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -60,13 +63,14 @@ export default function OrganizationPage() {
     try {
       setIsLoading(true);
       await Promise.all([
-        fetchMembers(),
-        fetchProjects(),
-        fetchAccessRequests()
+        loadMembers(),
+        loadProjects(),
+        loadAccessRequests()
       ]);
-    } catch (error) {
-      console.error('Error loading organization data:', error);
+      setError('');
+    } catch (err) {
       setError('Failed to load organization data');
+      console.error('Error loading organization data:', err);
     } finally {
       setIsLoading(false);
     }
@@ -90,9 +94,9 @@ export default function OrganizationPage() {
   };
 
   // Calculate statistics
-  const activeMembers = members.filter(m => m.isActive).length;
-  const activeProjects = projects.filter(p => p.status === 'active').length;
-  const pendingRequests = accessRequests.filter(r => r.status === 'pending').length;
+  const activeMembers = members.filter((m: User) => m.isActive).length;
+  const activeProjects = projects.filter((p: Project) => p.status === 'active').length;
+  const pendingRequests = accessRequests.filter((r: AccessRequest & { user: User; project?: Project }) => r.status === 'pending').length;
   const recentRequests = accessRequests.slice(0, 5);
 
   if (isLoading) {
@@ -171,7 +175,7 @@ export default function OrganizationPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Badge className={getPlanColor(organization?.plan || 'pro')} size="lg">
+                  <Badge className={getPlanColor(organization?.plan || 'pro')}>
                     <Crown className="w-3 h-3 mr-1" />
                     {organization?.plan?.toUpperCase() || 'PRO'}
                   </Badge>
@@ -242,7 +246,7 @@ export default function OrganizationPage() {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Admins</span>
-                    <span className="font-semibold">{members.filter(m => m.role === 'admin').length}</span>
+                    <span className="font-semibold">{members.filter((m: User) => m.role === 'admin').length}</span>
                   </div>
                 </div>
               </CardContent>
@@ -282,7 +286,7 @@ export default function OrganizationPage() {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Archived</span>
-                    <span className="font-semibold">{projects.filter(p => p.status === 'archived').length}</span>
+                    <span className="font-semibold">{projects.filter((p: Project) => p.status === 'archived').length}</span>
                   </div>
                 </div>
               </CardContent>
@@ -322,7 +326,7 @@ export default function OrganizationPage() {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Approved</span>
-                    <span className="font-semibold text-green-600">{accessRequests.filter(r => r.status === 'approved').length}</span>
+                    <span className="font-semibold text-green-600">{accessRequests.filter((r: AccessRequest & { user: User; project?: Project }) => r.status === 'approved').length}</span>
                   </div>
                 </div>
               </CardContent>
@@ -349,7 +353,7 @@ export default function OrganizationPage() {
             <CardContent>
               {recentRequests.length > 0 ? (
                 <div className="space-y-4">
-                  {recentRequests.map((request, index) => (
+                  {recentRequests.map((request: AccessRequest & { user: User; project?: Project }, index: number) => (
                     <div key={request.uuid || index} className="flex items-start gap-3 p-4 border rounded-lg hover:bg-muted/30 transition-colors">
                       <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
                       <div className="flex-1 min-w-0">
@@ -361,7 +365,6 @@ export default function OrganizationPage() {
                         <div className="flex items-center gap-2 mt-1">
                           <Badge 
                             variant={request.status === 'pending' ? 'secondary' : request.status === 'approved' ? 'default' : 'destructive'}
-                            size="sm"
                           >
                             {request.status}
                           </Badge>

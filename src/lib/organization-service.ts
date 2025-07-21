@@ -726,24 +726,31 @@ export class OrganizationService {
 
   // Get organization statistics
   async getOrganizationStats(): Promise<{
+    userProjects: number;
     totalMembers: number;
     totalProjects: number;
     pendingRequests: number;
     activeProjects: number;
   }> {
     const organization = await authService.getCurrentOrganization();
+    const currentUser = await authService.getCurrentUser();
+    
     if (!organization) {
-      return { totalMembers: 0, totalProjects: 0, pendingRequests: 0, activeProjects: 0 };
+      return { userProjects: 0, totalMembers: 0, totalProjects: 0, pendingRequests: 0, activeProjects: 0 };
     }
 
-    const [totalMembers, totalProjects, pendingRequests, activeProjects] = await Promise.all([
+    const [totalMembers, totalProjects, pendingRequests, activeProjects, userProjects] = await Promise.all([
       db.users.where('organizationId').equals(organization.uuid).and(u => u.isActive === true).count(),
       db.projects.where('organizationId').equals(organization.uuid).count(),
       db.accessRequests.where('status').equals('pending').count(),
-      db.projects.where('organizationId').equals(organization.uuid).and(p => p.status === 'active').count()
+      db.projects.where('organizationId').equals(organization.uuid).and(p => p.status === 'active').count(),
+      // Count projects where current user is a member (if user exists)
+      currentUser ? 
+        db.projectMembers.where('userId').equals(currentUser.uuid).count() : 
+        Promise.resolve(0)
     ]);
 
-    return { totalMembers, totalProjects, pendingRequests, activeProjects };
+    return { userProjects, totalMembers, totalProjects, pendingRequests, activeProjects };
   }
 }
 

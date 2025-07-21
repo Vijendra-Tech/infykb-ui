@@ -427,7 +427,7 @@ export class AuthService {
       
       console.log('📋 All sessions in database:', allSessions.map(s => {
         const isExpired = s.expiresAt <= now;
-        const isActiveBoolean = s.isActive === true || s.isActive === 1;
+        const isActiveBoolean = s.isActive === true;
         return {
           uuid: s.uuid,
           userId: s.userId,
@@ -444,7 +444,7 @@ export class AuthService {
       // Use simple filtering instead of complex Dexie queries to avoid DexieError
       const validSessions = allSessions.filter(session => {
         try {
-          const isActiveValue = session.isActive === true || session.isActive === 1;
+          const isActiveValue = session.isActive === true;
           const isNotExpired = session.expiresAt > now;
           const isValid = isActiveValue && isNotExpired;
           
