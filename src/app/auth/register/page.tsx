@@ -126,7 +126,7 @@ export default function RegisterPage() {
             <CardHeader className="space-y-1 pb-6">
               <CardTitle className="text-xl text-center">Create Account</CardTitle>
               <CardDescription className="text-center">
-                Choose how you'd like to get started
+                Choose how you&apos;d like to get started
               </CardDescription>
             </CardHeader>
 

@@ -1,4 +1,4 @@
-import { db, User, Organization, Project, ProjectMember, AccessRequest, UserPermission } from './database';
+import { db, User, Project, ProjectMember, AccessRequest } from './database';
 import { generateUUID } from './utils';
 import { authService } from './auth-service';
 
@@ -15,7 +15,7 @@ export interface ProjectData {
       apiVersion: string;
       embeddingModel?: string;
     };
-    settings?: Record<string, any>;
+    settings?: Record<string, unknown>;
   };
   permissions: {
     allowedRoles: string[];
@@ -54,7 +54,7 @@ export class OrganizationService {
     action: string,
     resource: string,
     resourceId?: string,
-    details: Record<string, any> = {},
+    details: Record<string, unknown> = {},
     severity: 'low' | 'medium' | 'high' | 'critical' = 'low'
   ): Promise<void> {
     try {

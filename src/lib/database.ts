@@ -250,12 +250,21 @@ export class AppDatabase extends Dexie {
 }
 
 // Utility function to generate UUIDs
-function generateUUID(): string {
+export function generateUUID(): string {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
     const r = Math.random() * 16 | 0;
     const v = c == 'x' ? r : (r & 0x3 | 0x8);
     return v.toString(16);
   });
+}
+
+// Hash password helper function (matches AuthService implementation)
+async function hashPassword(password: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password + 'salt');
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 // Create database instance
@@ -266,9 +275,26 @@ export async function initializeDatabase() {
   try {
     // Check if database is already initialized
     const userCount = await db.users.count();
+    console.log('Current user count:', userCount);
     if (userCount > 0) {
-      console.log('Database already initialized');
-      return;
+      console.log('Database already initialized with', userCount, 'users');
+      // List existing users for debugging
+      const users = await db.users.toArray();
+      console.log('Existing users:', users.map(u => ({ email: u.email, role: u.role, passwordHash: u.password })));
+      
+      // Check if passwords are already hashed (hash should be 64 characters)
+      const firstUser = users[0];
+      if (firstUser && firstUser.password && firstUser.password.length === 64) {
+        console.log('Passwords are already hashed, skipping initialization');
+        return;
+      } else {
+        console.log('Passwords are plain text, need to recreate with hashed passwords');
+        // Clear existing data to recreate with hashed passwords
+        await db.users.clear();
+        await db.organizations.clear();
+        await db.projects.clear();
+        console.log('Cleared existing data, proceeding with hashed password initialization');
+      }
     }
 
     console.log('Initializing database with seed data...');
@@ -294,11 +320,12 @@ export async function initializeDatabase() {
 
     // Create admin user
     const adminId = generateUUID();
+    const adminPasswordHash = await hashPassword('admin123');
     await db.users.add({
       uuid: adminId,
       email: 'admin@example.com',
       name: 'Admin User',
-      password: 'admin123', // In production, this should be hashed
+      password: adminPasswordHash,
       role: 'admin',
       organizationId: orgId,
       isActive: true,
@@ -312,11 +339,12 @@ export async function initializeDatabase() {
 
     // Create member user
     const memberId = generateUUID();
+    const memberPasswordHash = await hashPassword('member123');
     await db.users.add({
       uuid: memberId,
       email: 'member@example.com',
       name: 'Member User',
-      password: 'member123',
+      password: memberPasswordHash,
       role: 'member',
       organizationId: orgId,
       isActive: true,
@@ -327,11 +355,12 @@ export async function initializeDatabase() {
 
     // Create approver user
     const approverId = generateUUID();
+    const approverPasswordHash = await hashPassword('approver123');
     await db.users.add({
       uuid: approverId,
       email: 'approver@example.com',
       name: 'Approver User',
-      password: 'approver123',
+      password: approverPasswordHash,
       role: 'approver',
       organizationId: orgId,
       isActive: true,

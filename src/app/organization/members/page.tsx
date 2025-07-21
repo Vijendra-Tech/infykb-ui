@@ -147,8 +147,8 @@ export default function MembersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800 pt-20 pb-10 px-6 md:px-10 lg:px-12">
-      <div className="max-w-6xl mx-auto space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800 overflow-y-auto">
+      <div className="max-w-6xl mx-auto space-y-8 p-6 md:p-10 lg:p-12 pb-20">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}

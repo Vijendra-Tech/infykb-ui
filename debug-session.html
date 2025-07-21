@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Session Debug Utility</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .debug-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .debug-output { background: #f5f5f5; padding: 10px; margin: 10px 0; border-radius: 3px; font-family: monospace; white-space: pre-wrap; }
+        button { padding: 8px 16px; margin: 5px; cursor: pointer; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>Session Persistence Debug Utility</h1>
+    
+    <div class="debug-section">
+        <h3>Test Session Persistence</h3>
+        <button onclick="testLogin()">1. Test Login</button>
+        <button onclick="checkSession()">2. Check Current Session</button>
+        <button onclick="refreshPage()">3. Refresh Page</button>
+        <button onclick="clearSessions()">4. Clear All Sessions</button>
+        <button onclick="viewDatabase()">5. View Database</button>
+    </div>
+    
+    <div class="debug-section">
+        <h3>Debug Output</h3>
+        <div id="output" class="debug-output">Ready for debugging...</div>
+    </div>
+
+    <script>
+        let output = document.getElementById('output');
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : 'info';
+            output.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+            output.scrollTop = output.scrollHeight;
+            console.log(message);
+        }
+        
+        async function testLogin() {
+            log('🔄 Testing login with admin credentials...', 'info');
+            
+            try {
+                const response = await fetch('http://localhost:3000/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: 'admin@example.com',
+                        password: 'admin123',
+                        rememberMe: true
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    log('✅ Login successful!', 'success');
+                    log(`User: ${result.user?.email}, Role: ${result.user?.role}`, 'success');
+                    log(`Session expires: ${result.session?.expiresAt}`, 'success');
+                } else {
+                    log(`❌ Login failed: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Login error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function checkSession() {
+            log('🔍 Checking current session...', 'info');
+            
+            try {
+                // This would need to be implemented as an API endpoint
+                log('⚠️ Session check API not implemented yet', 'error');
+                
+                // For now, let's check localStorage/IndexedDB directly
+                if (typeof window !== 'undefined' && 'indexedDB' in window) {
+                    log('📊 IndexedDB is available', 'info');
+                    
+                    // Open the database and check sessions
+                    const request = indexedDB.open('InfinityKBDatabase', 1);
+                    
+                    request.onsuccess = function(event) {
+                        const db = event.target.result;
+                        const transaction = db.transaction(['sessions'], 'readonly');
+                        const store = transaction.objectStore('sessions');
+                        const getAllRequest = store.getAll();
+                        
+                        getAllRequest.onsuccess = function() {
+                            const sessions = getAllRequest.result;
+                            log(`📋 Found ${sessions.length} sessions in database`, 'info');
+                            
+                            sessions.forEach((session, index) => {
+                                const isExpired = new Date(session.expiresAt) <= new Date();
+                                log(`Session ${index + 1}: ${session.uuid} (User: ${session.userId}, Active: ${session.isActive}, Expired: ${isExpired})`, 'info');
+                            });
+                        };
+                    };
+                    
+                    request.onerror = function() {
+                        log('❌ Failed to open IndexedDB', 'error');
+                    };
+                }
+            } catch (error) {
+                log(`❌ Session check error: ${error.message}`, 'error');
+            }
+        }
+        
+        function refreshPage() {
+            log('🔄 Refreshing page to test session persistence...', 'info');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        }
+        
+        async function clearSessions() {
+            log('🗑️ Clearing all sessions...', 'info');
+            
+            try {
+                if (typeof window !== 'undefined' && 'indexedDB' in window) {
+                    const request = indexedDB.open('InfinityKBDatabase', 1);
+                    
+                    request.onsuccess = function(event) {
+                        const db = event.target.result;
+                        const transaction = db.transaction(['sessions'], 'readwrite');
+                        const store = transaction.objectStore('sessions');
+                        const clearRequest = store.clear();
+                        
+                        clearRequest.onsuccess = function() {
+                            log('✅ All sessions cleared', 'success');
+                        };
+                        
+                        clearRequest.onerror = function() {
+                            log('❌ Failed to clear sessions', 'error');
+                        };
+                    };
+                }
+            } catch (error) {
+                log(`❌ Clear sessions error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function viewDatabase() {
+            log('📊 Viewing database contents...', 'info');
+            
+            try {
+                if (typeof window !== 'undefined' && 'indexedDB' in window) {
+                    const request = indexedDB.open('InfinityKBDatabase', 1);
+                    
+                    request.onsuccess = function(event) {
+                        const db = event.target.result;
+                        const storeNames = ['users', 'sessions', 'organizations'];
+                        
+                        storeNames.forEach(storeName => {
+                            const transaction = db.transaction([storeName], 'readonly');
+                            const store = transaction.objectStore(storeName);
+                            const getAllRequest = store.getAll();
+                            
+                            getAllRequest.onsuccess = function() {
+                                const items = getAllRequest.result;
+                                log(`📋 ${storeName}: ${items.length} items`, 'info');
+                                
+                                if (storeName === 'sessions') {
+                                    items.forEach(item => {
+                                        log(`  Session: ${item.uuid} (User: ${item.userId}, Active: ${item.isActive}, Expires: ${item.expiresAt})`, 'info');
+                                    });
+                                } else if (storeName === 'users') {
+                                    items.forEach(item => {
+                                        log(`  User: ${item.email} (Role: ${item.role}, Active: ${item.isActive})`, 'info');
+                                    });
+                                }
+                            };
+                        });
+                    };
+                }
+            } catch (error) {
+                log(`❌ Database view error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Auto-check session on page load
+        window.addEventListener('load', () => {
+            log('🚀 Debug utility loaded', 'success');
+            setTimeout(checkSession, 1000);
+        });
+    </script>
+</body>
+</html>

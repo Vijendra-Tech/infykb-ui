@@ -1,31 +1,27 @@
 "use client";
 import { useState } from "react";
 import { useSidebar } from "@/context/sidebar-context";
-import { useRoleStore } from "@/store/use-role-store";
 import { useDexieAuthStore } from "@/store/use-dexie-auth-store";
 import { useChatHistoryStore } from "@/store/use-chat-history-store";
-import { useDataIngestionStore } from "@/store/use-data-ingestion-store";
 import { ChatHistory } from "@/components/chat-history";
 import {
   BarChart,
-  BotIcon,
   Clock,
   Database,
   FileText,
   Home,
   Menu,
   Pencil,
-  Settings,
   Share2,
   UserCheck,
   Users,
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Logo } from "@/components/ui/logo";
-import { Button } from "@/components/ui/button";
+
 import {
   Tooltip,
   TooltipContent,
@@ -45,53 +41,89 @@ const SidebarItem = ({ icon, label, active, badge, href = "#" }: SidebarItemProp
   
   if (!collapsed) {
     return (
-      <Link
-        href={href}
-        className={`group flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300 ease-out ${
-          active 
-            ? "bg-gradient-to-r from-indigo-100/80 via-blue-50/60 to-indigo-50/80 dark:from-indigo-900/40 dark:via-blue-900/30 dark:to-indigo-800/40 text-indigo-700 dark:text-indigo-300 shadow-lg shadow-indigo-200/30 dark:shadow-indigo-900/20 border border-indigo-200/50 dark:border-indigo-700/50 backdrop-blur-sm" 
-            : "hover:bg-gradient-to-r hover:from-slate-50/80 hover:via-indigo-50/30 hover:to-slate-50/80 dark:hover:from-slate-800/60 dark:hover:via-slate-700/40 dark:hover:to-slate-800/60 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 hover:shadow-md hover:shadow-slate-200/20 dark:hover:shadow-slate-900/30 hover:border hover:border-slate-200/40 dark:hover:border-slate-600/40 hover:backdrop-blur-sm"
-        }`}
+      <motion.div
+        whileHover={{ scale: 1.02, x: 4 }}
+        whileTap={{ scale: 0.98 }}
+        transition={{ type: "spring", stiffness: 400, damping: 25 }}
       >
-        <div className={`transition-all duration-300 ease-out ${
-          active ? "text-indigo-600 dark:text-indigo-400 drop-shadow-sm" : "text-slate-500 dark:text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 group-hover:drop-shadow-sm"
-        }`}>
-          {icon}
-        </div>
-        <span className={`flex-1 font-semibold text-sm transition-all duration-300 ease-out tracking-wide ${
-          active ? "text-indigo-700 dark:text-indigo-300" : "text-slate-700 dark:text-slate-200 group-hover:text-slate-900 dark:group-hover:text-slate-100"
-        }`}>{label}</span>
-        {badge && (
-          <span className={`text-xs px-2.5 py-1 rounded-full font-semibold transition-all duration-300 ease-out ${
+        <Link
+          href={href}
+          className={`group flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 ease-out relative overflow-hidden ${
             active 
-              ? "bg-gradient-to-r from-indigo-100 to-blue-100 dark:from-indigo-900/60 dark:to-blue-900/60 text-indigo-700 dark:text-indigo-300 shadow-sm" 
-              : "bg-slate-100/80 dark:bg-slate-700/80 text-slate-600 dark:text-slate-300 group-hover:bg-indigo-100/80 dark:group-hover:bg-indigo-900/40 group-hover:text-indigo-700 dark:group-hover:text-indigo-300 group-hover:shadow-sm backdrop-blur-sm"
+              ? "bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-blue-500/10 dark:from-blue-400/20 dark:via-purple-400/20 dark:to-blue-400/20 text-blue-700 dark:text-blue-300 shadow-lg shadow-blue-500/20 dark:shadow-blue-400/30 border border-blue-200/50 dark:border-blue-400/30 backdrop-blur-sm" 
+              : "hover:bg-gradient-to-r hover:from-slate-50/80 hover:via-blue-50/30 hover:to-slate-50/80 dark:hover:from-slate-800/60 dark:hover:via-slate-700/40 dark:hover:to-slate-800/60 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 hover:shadow-lg hover:shadow-slate-200/30 dark:hover:shadow-slate-900/40 hover:border hover:border-slate-200/50 dark:hover:border-slate-600/50 hover:backdrop-blur-sm"
+          }`}
+        >
+          {active && (
+            <motion.div
+              className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-purple-600/5 dark:from-blue-400/10 dark:to-purple-400/10 rounded-2xl"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3 }}
+            />
+          )}
+          <div className={`relative z-10 transition-all duration-300 ease-out ${
+            active ? "text-blue-600 dark:text-blue-400 drop-shadow-sm" : "text-slate-500 dark:text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-300 group-hover:drop-shadow-sm"
           }`}>
-            {badge}
-          </span>
-        )}
-      </Link>
+            {icon}
+          </div>
+          <span className={`relative z-10 flex-1 font-semibold text-sm transition-all duration-300 ease-out tracking-wide ${
+            active ? "text-blue-700 dark:text-blue-300" : "text-slate-700 dark:text-slate-200 group-hover:text-slate-900 dark:group-hover:text-slate-100"
+          }`}>{label}</span>
+          {badge && (
+            <motion.span 
+              className={`relative z-10 text-xs px-3 py-1.5 rounded-full font-semibold transition-all duration-300 ease-out ${
+                active 
+                  ? "bg-gradient-to-r from-blue-100 to-purple-100 dark:from-blue-900/60 dark:to-purple-900/60 text-blue-700 dark:text-blue-300 shadow-sm border border-blue-200/50 dark:border-blue-400/30" 
+                  : "bg-slate-100/80 dark:bg-slate-700/80 text-slate-600 dark:text-slate-300 group-hover:bg-blue-100/80 dark:group-hover:bg-blue-900/40 group-hover:text-blue-700 dark:group-hover:text-blue-300 group-hover:shadow-sm backdrop-blur-sm group-hover:border group-hover:border-blue-200/30 dark:group-hover:border-blue-400/20"
+              }`}
+              whileHover={{ scale: 1.1 }}
+              transition={{ type: "spring", stiffness: 400, damping: 25 }}
+            >
+              {badge}
+            </motion.span>
+          )}
+        </Link>
+      </motion.div>
     );
   } else {
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          <Link
-            href={href}
-            className={`flex justify-center items-center p-3 rounded-xl transition-all duration-300 ease-out ${
-              active 
-                ? "bg-gradient-to-r from-indigo-100/80 via-blue-50/60 to-indigo-50/80 dark:from-indigo-900/40 dark:via-blue-900/30 dark:to-indigo-800/40 text-indigo-600 dark:text-indigo-400 shadow-lg shadow-indigo-200/30 dark:shadow-indigo-900/20 border border-indigo-200/50 dark:border-indigo-700/50 backdrop-blur-sm" 
-                : "hover:bg-gradient-to-r hover:from-slate-50/80 hover:via-indigo-50/30 hover:to-slate-50/80 dark:hover:from-slate-800/60 dark:hover:via-slate-700/40 dark:hover:to-slate-800/60 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 hover:shadow-md hover:shadow-slate-200/20 dark:hover:shadow-slate-900/30 hover:border hover:border-slate-200/40 dark:hover:border-slate-600/40 hover:backdrop-blur-sm"
-            }`}
+          <motion.div
+            whileHover={{ scale: 1.1, y: -2 }}
+            whileTap={{ scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 400, damping: 25 }}
           >
-            <div className={`transition-all duration-300 ease-out ${
-              active ? "text-indigo-600 dark:text-indigo-400 drop-shadow-sm" : "text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 hover:drop-shadow-sm"
-            }`}>{icon}</div>
-          </Link>
+            <Link
+              href={href}
+              className={`flex justify-center items-center p-3.5 rounded-2xl transition-all duration-300 ease-out relative overflow-hidden ${
+                active 
+                  ? "bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-blue-500/10 dark:from-blue-400/20 dark:via-purple-400/20 dark:to-blue-400/20 text-blue-600 dark:text-blue-400 shadow-lg shadow-blue-500/20 dark:shadow-blue-400/30 border border-blue-200/50 dark:border-blue-400/30 backdrop-blur-sm" 
+                  : "hover:bg-gradient-to-r hover:from-slate-50/80 hover:via-blue-50/30 hover:to-slate-50/80 dark:hover:from-slate-800/60 dark:hover:via-slate-700/40 dark:hover:to-slate-800/60 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-300 hover:shadow-lg hover:shadow-slate-200/30 dark:hover:shadow-slate-900/40 hover:border hover:border-slate-200/50 dark:hover:border-slate-600/50 hover:backdrop-blur-sm"
+              }`}
+            >
+              {active && (
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-purple-600/5 dark:from-blue-400/10 dark:to-purple-400/10 rounded-2xl"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.3 }}
+                />
+              )}
+              <div className={`relative z-10 transition-all duration-300 ease-out ${
+                active ? "text-blue-600 dark:text-blue-400 drop-shadow-sm" : "text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-300 hover:drop-shadow-sm"
+              }`}>{icon}</div>
+            </Link>
+          </motion.div>
         </TooltipTrigger>
-        <TooltipContent side="right" className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 border-slate-700 dark:border-slate-300">
+        <TooltipContent side="right" className="bg-gradient-to-r from-slate-900 to-slate-800 dark:from-slate-100 dark:to-slate-50 text-white dark:text-slate-900 border-slate-700 dark:border-slate-300 shadow-xl backdrop-blur-sm">
           <span className="font-medium">{label}</span>
-          {badge && ` (${badge})`}
+          {badge && (
+            <span className="ml-2 px-2 py-0.5 bg-blue-500/20 dark:bg-blue-600/20 rounded-full text-xs">
+              {badge}
+            </span>
+          )}
         </TooltipContent>
       </Tooltip>
     );
@@ -141,38 +173,54 @@ const SidebarSection = ({
 
 export function Sidebar() {
   const { collapsed, setCollapsed } = useSidebar();
-  const { role } = useRoleStore();
-  const { isApprover } = useDexieAuthStore();
+  const { isAdmin, isApprover } = useDexieAuthStore();
+  const { chats } = useChatHistoryStore();
   const pathname = usePathname();
-  const router = useRouter();
   const [isChatHistoryOpen, setIsChatHistoryOpen] = useState(false);
 
   return (
     <motion.div
       className={`h-full ${
         collapsed ? "w-16" : "w-72"
-      } border-r border-slate-200/60 dark:border-slate-700/60 bg-gradient-to-b from-white via-slate-50/30 to-white dark:from-slate-900 dark:via-slate-800/50 dark:to-slate-900 flex flex-col transition-all duration-500 ease-out relative shadow-xl shadow-slate-200/20 dark:shadow-slate-900/40 backdrop-blur-sm`}
+      } border-r border-slate-200/40 dark:border-slate-700/40 bg-gradient-to-b from-white/95 via-slate-50/60 to-white/95 dark:from-slate-950/95 dark:via-slate-900/80 dark:to-slate-950/95 flex flex-col transition-all duration-500 ease-out relative shadow-2xl shadow-slate-200/30 dark:shadow-slate-900/50 backdrop-blur-xl`}
       animate={{ width: collapsed ? 70 : 288 }}
       transition={{ type: "spring", stiffness: 200, damping: 30, mass: 1 }}
     >
-      <div className="h-18 px-6 flex items-center justify-between bg-gradient-to-r from-indigo-50/70 via-blue-50/50 to-slate-50/70 dark:from-slate-800/95 dark:via-indigo-900/40 dark:to-slate-800/95 border-b border-indigo-200/30 dark:border-slate-600/50 backdrop-blur-md">
+      {/* Sidebar Header */}
+      <div className="h-18 px-6 flex items-center justify-between bg-gradient-to-r from-blue-50/80 via-purple-50/60 to-blue-50/80 dark:from-slate-900/95 dark:via-slate-800/80 dark:to-slate-900/95 border-b border-blue-200/40 dark:border-slate-600/40 backdrop-blur-xl relative overflow-hidden">
+        {/* Animated background gradient */}
+        <motion.div
+          className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-purple-500/5 to-blue-500/5 dark:from-blue-400/10 dark:via-purple-400/10 dark:to-blue-400/10"
+          animate={{
+            backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
+          }}
+          transition={{
+            duration: 8,
+            repeat: Infinity,
+            ease: 'linear',
+          }}
+          style={{
+            backgroundSize: '200% 200%',
+          }}
+        />
         {!collapsed && (
           <>
             <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.3 }}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.4, delay: 0.1 }}
+              className="relative z-10"
             >
               <Logo size="md" variant="sidebar" />
             </motion.div>
             <motion.button
-              className="p-2.5 rounded-xl hover:bg-white/60 dark:hover:bg-slate-700/60 hover:shadow-lg hover:shadow-indigo-200/20 dark:hover:shadow-slate-900/40 ml-auto flex items-center justify-center transition-all duration-300 ease-out backdrop-blur-sm border border-transparent hover:border-indigo-200/30 dark:hover:border-slate-600/30"
+              className="relative z-10 p-3 rounded-2xl hover:bg-white/80 dark:hover:bg-slate-700/80 hover:shadow-lg hover:shadow-blue-200/30 dark:hover:shadow-slate-900/50 ml-auto flex items-center justify-center transition-all duration-300 ease-out backdrop-blur-sm border border-transparent hover:border-blue-200/40 dark:hover:border-slate-600/40 group"
               onClick={() => setCollapsed(true)}
-              whileHover={{ scale: 1.1, backgroundColor: 'rgba(255,255,255,0.1)' }}
+              whileHover={{ scale: 1.1, rotate: 90 }}
               whileTap={{ scale: 0.9 }}
               aria-label="Collapse sidebar"
             >
-              <X size={18} className="text-slate-600 dark:text-slate-300" />
+              <X size={18} className="text-slate-600 dark:text-slate-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-200" />
             </motion.button>
           </>
         )}
@@ -180,21 +228,28 @@ export function Sidebar() {
           <Tooltip>
             <TooltipTrigger asChild>
               <motion.button
-                className="p-2.5 rounded-xl hover:bg-white/60 dark:hover:bg-slate-700/60 hover:shadow-lg hover:shadow-indigo-200/20 dark:hover:shadow-slate-900/40 mx-auto flex items-center justify-center transition-all duration-300 ease-out backdrop-blur-sm border border-transparent hover:border-indigo-200/30 dark:hover:border-slate-600/30"
+                className="relative z-10 p-3 rounded-2xl hover:bg-white/80 dark:hover:bg-slate-700/80 hover:shadow-lg hover:shadow-blue-200/30 dark:hover:shadow-slate-900/50 mx-auto flex items-center justify-center transition-all duration-300 ease-out backdrop-blur-sm border border-transparent hover:border-blue-200/40 dark:hover:border-slate-600/40 group"
                 onClick={() => setCollapsed(false)}
-                whileHover={{ scale: 1.1, backgroundColor: 'rgba(255,255,255,0.1)' }}
+                whileHover={{ scale: 1.1, rotate: 180 }}
                 whileTap={{ scale: 0.9 }}
                 aria-label="Expand sidebar"
               >
-                <Menu size={20} className="text-slate-600 dark:text-slate-300" />
+                <Menu size={20} className="text-slate-600 dark:text-slate-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-200" />
               </motion.button>
             </TooltipTrigger>
-            <TooltipContent side="right">Expand sidebar</TooltipContent>
+            <TooltipContent side="right" className="bg-gradient-to-r from-slate-900 to-slate-800 dark:from-slate-100 dark:to-slate-50 text-white dark:text-slate-900 border-slate-700 dark:border-slate-300 shadow-xl backdrop-blur-sm">
+              <span className="font-medium">Expand sidebar</span>
+            </TooltipContent>
           </Tooltip>
         )}
       </div>
-      <div className="flex-1 overflow-auto py-6 px-4 bg-gradient-to-b from-white/80 via-indigo-50/20 to-slate-50/60 dark:from-slate-900/90 dark:via-slate-800/70 dark:to-slate-900/95 relative">
-        <div className="space-y-1 mb-4">
+      {/* Main Content Area */}
+      <div className="flex-1 overflow-auto py-6 px-4 bg-gradient-to-b from-white/90 via-blue-50/30 to-slate-50/80 dark:from-slate-950/90 dark:via-slate-900/80 dark:to-slate-950/95 relative">
+        {/* Subtle background pattern */}
+        <div className="absolute inset-0 opacity-30 dark:opacity-20">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-purple-500/5 dark:from-blue-400/10 dark:via-transparent dark:to-purple-400/10" />
+        </div>
+        <div className="relative z-10 space-y-2 mb-6">
           <AnimatePresence mode="wait" initial={false}>
             {collapsed ? (
               <motion.div
@@ -208,13 +263,13 @@ export function Sidebar() {
                   <TooltipTrigger asChild>
                     <Link
                       href="/"
-                      className={`flex justify-center py-2 rounded-md transition-colors ${
+                      className={`flex justify-center py-3 rounded-2xl transition-all duration-300 ease-out ${
                         pathname === "/" 
-                          ? "bg-primary" 
-                          : "hover:bg-secondary/50"
+                          ? "bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-blue-500/10 dark:from-blue-400/20 dark:via-purple-400/20 dark:to-blue-400/20 shadow-lg shadow-blue-500/20 dark:shadow-blue-400/30 border border-blue-200/50 dark:border-blue-400/30" 
+                          : "hover:bg-gradient-to-r hover:from-slate-50/80 hover:via-blue-50/30 hover:to-slate-50/80 dark:hover:from-slate-800/60 dark:hover:via-slate-700/40 dark:hover:to-slate-800/60 hover:shadow-lg hover:shadow-slate-200/30 dark:hover:shadow-slate-900/40"
                       }`}
                     >
-                      <Home size={18} className={pathname === "/" ? "text-primary-foreground" : "text-muted-foreground"} />
+                      <Home size={18} className={pathname === "/" ? "text-blue-600 dark:text-blue-400" : "text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-300"} />
                     </Link>
                   </TooltipTrigger>
                   <TooltipContent side="right">Home</TooltipContent>
@@ -229,9 +284,10 @@ export function Sidebar() {
                 transition={{ duration: 0.2 }}
               >
                 <SidebarItem 
-                  icon={<Home size={18} className={pathname === "/" ? "text-primary dark:text-blue-400" : "text-muted-foreground dark:text-slate-300"} />} 
+                  icon={<Home size={18} />} 
                   label="Home" 
                   href="/"
+                  active={pathname === "/"}
                 />
               </motion.div>
             )}
@@ -248,36 +304,84 @@ export function Sidebar() {
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.2, delay: 0.1 }}
             >
-              <div className="space-y-2 px-3 py-2">
-                <Link
-                  href="/chat"
-                  onClick={() => {
-                    const { addChat } = useChatHistoryStore.getState();
-                    addChat({ title: "New Chat" });
-                  }}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${pathname === "/chat" && !pathname.includes("?id=") ? "bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300" : "bg-secondary/30 dark:bg-slate-700/30 hover:bg-secondary/50 dark:hover:bg-slate-700/50"} border border-primary/10 dark:border-slate-600/30`}
+              <div className="space-y-2">
+                {/* New Chat */}
+                <motion.div
+                  whileHover={{ scale: 1.02, x: 4 }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 25 }}
                 >
-                  <div className={pathname === "/chat" && !pathname.includes("?id=") ? "text-orange-800 dark:text-orange-300" : "text-primary dark:text-blue-400"}>
-                    <Pencil size={16} />
-                  </div>
-                  <span className="flex-1 font-medium text-sm text-slate-700 dark:text-slate-200">New Chat</span>
-                </Link>
-                
-                <button
-                  onClick={() => setIsChatHistoryOpen(true)}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors w-full hover:bg-secondary/50 dark:hover:bg-slate-700/50 cursor-pointer`}
+                  <Link
+                    href="/chat"
+                    onClick={() => {
+                      const { addChat } = useChatHistoryStore.getState();
+                      addChat({ title: "New Chat" });
+                    }}
+                    className={`group flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 ease-out relative overflow-hidden ${
+                      pathname === "/chat" && !pathname.includes("?id=")
+                        ? "bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-blue-500/10 dark:from-blue-400/20 dark:via-purple-400/20 dark:to-blue-400/20 text-blue-700 dark:text-blue-300 shadow-lg shadow-blue-500/20 dark:shadow-blue-400/30 border border-blue-200/50 dark:border-blue-400/30 backdrop-blur-sm" 
+                        : "hover:bg-gradient-to-r hover:from-slate-50/80 hover:via-blue-50/30 hover:to-slate-50/80 dark:hover:from-slate-800/60 dark:hover:via-slate-700/40 dark:hover:to-slate-800/60 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 hover:shadow-lg hover:shadow-slate-200/30 dark:hover:shadow-slate-900/40 hover:border hover:border-slate-200/50 dark:hover:border-slate-600/50 hover:backdrop-blur-sm"
+                    }`}
+                  >
+                    {pathname === "/chat" && !pathname.includes("?id=") && (
+                      <motion.div
+                        className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-purple-600/5 dark:from-blue-400/10 dark:to-purple-400/10 rounded-2xl"
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.3 }}
+                      />
+                    )}
+                    <div className={`relative z-10 transition-all duration-300 ease-out ${
+                      pathname === "/chat" && !pathname.includes("?id=") ? "text-blue-600 dark:text-blue-400 drop-shadow-sm" : "text-slate-500 dark:text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-300 group-hover:drop-shadow-sm"
+                    }`}>
+                      <Pencil size={18} />
+                    </div>
+                    <span className={`relative z-10 flex-1 font-semibold text-sm transition-all duration-300 ease-out tracking-wide ${
+                      pathname === "/chat" && !pathname.includes("?id=") ? "text-blue-700 dark:text-blue-300" : "text-slate-700 dark:text-slate-200 group-hover:text-slate-900 dark:group-hover:text-slate-100"
+                    }`}>New Chat</span>
+                    <motion.div
+                      className="relative z-10 text-xs px-3 py-1.5 rounded-full font-semibold bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/60 dark:to-emerald-900/60 text-green-700 dark:text-green-300 shadow-sm border border-green-200/50 dark:border-green-400/30"
+                      whileHover={{ scale: 1.1 }}
+                      transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                    >
+                      ✨ New
+                    </motion.div>
+                  </Link>
+                </motion.div>
+
+                {/* Chat History */}
+                <motion.div
+                  whileHover={{ scale: 1.02, x: 4 }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 25 }}
                 >
-                  <div className="text-muted-foreground dark:text-slate-400">
-                    <Clock size={16} />
-                  </div>
-                  <span className="flex-1 font-medium text-sm text-left text-slate-700 dark:text-slate-200">Chats</span>
-                </button>
+                  <button
+                    onClick={() => setIsChatHistoryOpen(true)}
+                    className="group flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 ease-out relative overflow-hidden w-full hover:bg-gradient-to-r hover:from-slate-50/80 hover:via-blue-50/30 hover:to-slate-50/80 dark:hover:from-slate-800/60 dark:hover:via-slate-700/40 dark:hover:to-slate-800/60 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 hover:shadow-lg hover:shadow-slate-200/30 dark:hover:shadow-slate-900/40 hover:border hover:border-slate-200/50 dark:hover:border-slate-600/50 hover:backdrop-blur-sm"
+                  >
+                    <div className="relative z-10 transition-all duration-300 ease-out text-slate-500 dark:text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-300 group-hover:drop-shadow-sm">
+                      <Clock size={18} />
+                    </div>
+                    <span className="relative z-10 flex-1 font-semibold text-sm transition-all duration-300 ease-out tracking-wide text-left text-slate-700 dark:text-slate-200 group-hover:text-slate-900 dark:group-hover:text-slate-100">
+                      Chat History
+                    </span>
+                    {chats.length > 0 && (
+                      <motion.span
+                        className="relative z-10 text-xs px-3 py-1.5 rounded-full font-semibold bg-slate-100/80 dark:bg-slate-700/80 text-slate-600 dark:text-slate-300 group-hover:bg-blue-100/80 dark:group-hover:bg-blue-900/40 group-hover:text-blue-700 dark:group-hover:text-blue-300 group-hover:shadow-sm backdrop-blur-sm group-hover:border group-hover:border-blue-200/30 dark:group-hover:border-blue-400/20 transition-all duration-300 ease-out"
+                        whileHover={{ scale: 1.1 }}
+                        transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                      >
+                        {chats.length}
+                      </motion.span>
+                    )}
+                  </button>
+                </motion.div>
               </div>
 
               {/* Organization Management - Admin/Approver sections */}
-              {(role === "Admin" || isApprover()) && (
+              {(isAdmin() || isApprover()) && (
                 <SidebarSection title="Organization">
-                  {role === "Admin" && (
+                  {isAdmin() && (
                     <SidebarItem
                       icon={
                         <Home size={18} className={pathname === "/dashboard" ? "text-indigo-600 dark:text-indigo-400" : "text-muted-foreground dark:text-slate-300"}/>
@@ -287,7 +391,7 @@ export function Sidebar() {
                       href="/dashboard"
                     />
                   )}
-                  {role === "Admin" && (
+                  {isAdmin() && (
                     <SidebarItem
                       icon={
                         <Users size={18} className={pathname === "/organization/members" ? "text-indigo-600 dark:text-indigo-400" : "text-muted-foreground dark:text-slate-300"}/>
@@ -297,7 +401,7 @@ export function Sidebar() {
                       href="/organization/members"
                     />
                   )}
-                  {role === "Admin" && (
+                  {isAdmin() && (
                     <SidebarItem
                       icon={
                         <Database size={18} className={pathname === "/projects" ? "text-indigo-600 dark:text-indigo-400" : "text-muted-foreground dark:text-slate-300"}/>
@@ -321,7 +425,7 @@ export function Sidebar() {
               )}
 
               {/* System Administration - Admin-only sections */}
-              {role === "Admin" && (
+              {isAdmin() && (
                 <SidebarSection title="System Administration">
                   <SidebarItem
                     icon={
@@ -408,9 +512,9 @@ export function Sidebar() {
               </Tooltip>
 
               {/* Organization icons in collapsed mode */}
-              {(role === "Admin" || isApprover()) && (
+              {(isAdmin() || isApprover()) && (
                 <>
-                  {role === "Admin" && (
+                  {isAdmin() && (
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Link
@@ -427,7 +531,7 @@ export function Sidebar() {
                       <TooltipContent side="right">Dashboard</TooltipContent>
                     </Tooltip>
                   )}
-                  {role === "Admin" && (
+                  {isAdmin() && (
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Link
@@ -444,7 +548,7 @@ export function Sidebar() {
                       <TooltipContent side="right">Members</TooltipContent>
                     </Tooltip>
                   )}
-                  {role === "Admin" && (
+                  {isAdmin() && (
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Link
@@ -482,7 +586,7 @@ export function Sidebar() {
               )}
 
               {/* System Administration icons in collapsed mode */}
-              {role === "Admin" && (
+              {isAdmin() && (
                 <>
                   <Tooltip>
                     <TooltipTrigger asChild>

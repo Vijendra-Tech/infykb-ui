@@ -1,4 +1,4 @@
-import { db, User, Organization, Session, AuditLog } from './database';
+import { db, User, Organization, Session } from './database';
 import { generateUUID } from './utils';
 
 export interface LoginCredentials {
@@ -66,7 +66,7 @@ export class AuthService {
     resource: string,
     userId?: string,
     organizationId?: string,
-    details: Record<string, any> = {},
+    details: Record<string, unknown> = {},
     severity: 'low' | 'medium' | 'high' | 'critical' = 'low'
   ): Promise<void> {
     try {
@@ -90,12 +90,16 @@ export class AuthService {
   // Login user
   async login(credentials: LoginCredentials): Promise<AuthResult> {
     try {
+      console.log('AuthService: Attempting login for:', credentials.email);
+      
       // Find user by email
       const user = await db.users
         .where('email')
         .equalsIgnoreCase(credentials.email.trim())
         .and(u => u.isActive === true)
         .first();
+
+      console.log('AuthService: User found:', user ? { email: user.email, role: user.role } : 'No user found');
 
       if (!user) {
         await this.createAuditLog(
@@ -110,7 +114,13 @@ export class AuthService {
       }
 
       // Verify password
+      console.log('AuthService: Verifying password for user:', user.email);
+      console.log('AuthService: Input password:', credentials.password);
+      console.log('AuthService: Stored password hash:', user.password);
+      const inputHash = await this.hashPassword(credentials.password);
+      console.log('AuthService: Generated hash from input:', inputHash);
       const isValidPassword = await this.verifyPassword(credentials.password, user.password);
+      console.log('AuthService: Password valid:', isValidPassword);
       if (!isValidPassword) {
         await this.createAuditLog(
           'login_failed',
@@ -143,6 +153,7 @@ export class AuthService {
       }
 
       // Create session
+      console.log('🔑 Creating new session for user:', user.email);
       const sessionToken = this.generateSessionToken();
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + (credentials.rememberMe ? 24 * 30 : 24)); // 30 days or 24 hours
@@ -161,7 +172,27 @@ export class AuthService {
         lastUsedAt: new Date()
       };
 
+      console.log('💾 Storing session in database:', {
+        sessionId: session.uuid,
+        userId: session.userId,
+        expires: session.expiresAt,
+        rememberMe: credentials.rememberMe,
+        hoursValid: credentials.rememberMe ? 24 * 30 : 24
+      });
+      
       await db.sessions.add(session);
+      
+      // Verify session was stored
+      const storedSession = await db.sessions.where('uuid').equals(session.uuid).first();
+      console.log('✅ Session verification after storage:', storedSession ? 'SUCCESS' : 'FAILED');
+      if (storedSession) {
+        console.log('📊 Stored session details:', {
+          uuid: storedSession.uuid,
+          userId: storedSession.userId,
+          isActive: storedSession.isActive,
+          expires: storedSession.expiresAt
+        });
+      }
 
       // Update user's last login
       await db.users.where('uuid').equals(user.uuid).modify({
@@ -343,36 +374,112 @@ export class AuthService {
 
   // Get current session
   async getCurrentSession(): Promise<Session | null> {
-    if (this.currentSession) {
-      // Check if session is still valid
-      if (this.currentSession.expiresAt > new Date() && this.currentSession.isActive) {
-        // Update last used time
-        await db.sessions
-          .where('uuid')
-          .equals(this.currentSession.uuid)
-          .modify({ lastUsedAt: new Date() });
+    try {
+      console.log('🔍 getCurrentSession called');
+      console.log('📊 Current session in memory:', this.currentSession ? 'exists' : 'null');
+      
+      if (this.currentSession) {
+        console.log('⏰ Checking in-memory session validity:', {
+          expires: this.currentSession.expiresAt,
+          now: new Date(),
+          isActive: this.currentSession.isActive,
+          isValid: this.currentSession.expiresAt > new Date() && this.currentSession.isActive
+        });
         
-        return this.currentSession;
-      } else {
-        // Session expired, clean up
-        await this.logout();
+        // Check if session is still valid
+        if (this.currentSession.expiresAt > new Date() && this.currentSession.isActive) {
+          console.log('✅ In-memory session is valid, updating last used time');
+          try {
+            // Update last used time
+            await db.sessions
+              .where('uuid')
+              .equals(this.currentSession.uuid)
+              .modify({ lastUsedAt: new Date() });
+          } catch (updateError) {
+            console.warn('⚠️ Failed to update session last used time:', updateError);
+          }
+          
+          return this.currentSession;
+        } else {
+          console.log('❌ In-memory session expired, cleaning up');
+          // Session expired, clean up
+          try {
+            await this.logout();
+          } catch (logoutError) {
+            console.warn('⚠️ Failed to logout expired session:', logoutError);
+          }
+          return null;
+        }
+      }
+
+      console.log('🔄 No in-memory session, checking database for active sessions...');
+      
+      // Try to restore session from database (for page refresh scenarios)
+      let allSessions: Session[] = [];
+      try {
+        allSessions = await db.sessions.toArray();
+      } catch (dbError) {
+        console.error('❌ Failed to fetch sessions from database:', dbError);
         return null;
       }
+      
+      const now = new Date();
+      
+      console.log('📋 All sessions in database:', allSessions.map(s => {
+        const isExpired = s.expiresAt <= now;
+        const isActiveBoolean = s.isActive === true || s.isActive === 1;
+        return {
+          uuid: s.uuid,
+          userId: s.userId,
+          isActive: s.isActive,
+          isActiveBoolean,
+          expires: s.expiresAt,
+          expired: isExpired,
+          valid: isActiveBoolean && !isExpired
+        };
+      }));
+      
+      console.log('🕐 Current time for comparison:', now);
+      
+      // Use simple filtering instead of complex Dexie queries to avoid DexieError
+      const validSessions = allSessions.filter(session => {
+        try {
+          const isActiveValue = session.isActive === true || session.isActive === 1;
+          const isNotExpired = session.expiresAt > now;
+          const isValid = isActiveValue && isNotExpired;
+          
+          console.log(`🧪 Session ${session.uuid}: isActive=${session.isActive} (${typeof session.isActive}), expires=${session.expiresAt}, valid=${isValid}`);
+          
+          return isValid;
+        } catch (filterError) {
+          console.warn(`⚠️ Error filtering session ${session.uuid}:`, filterError);
+          return false;
+        }
+      });
+      
+      console.log('🔍 Found', validSessions.length, 'valid sessions');
+      
+      if (validSessions.length > 0) {
+        console.log('✅ Restoring session from database:', {
+          sessionId: validSessions[0].uuid,
+          userId: validSessions[0].userId,
+          expires: validSessions[0].expiresAt,
+          isActive: validSessions[0].isActive,
+          isActiveType: typeof validSessions[0].isActive
+        });
+        this.currentSession = validSessions[0];
+        return this.currentSession;
+      }
+
+      console.log('🚫 No valid sessions found in database');
+      return null;
+      
+    } catch (error) {
+      console.error('❌ Critical error in getCurrentSession:', error);
+      // Reset current session to prevent infinite loops
+      this.currentSession = null;
+      return null;
     }
-
-    // Try to restore session from database (for page refresh scenarios)
-    const activeSessions = await db.sessions
-      .where('isActive')
-      .equals(1)
-      .and(session => session.expiresAt > new Date())
-      .toArray();
-
-    if (activeSessions.length > 0) {
-      this.currentSession = activeSessions[0];
-      return this.currentSession;
-    }
-
-    return null;
   }
 
   // Get current user
@@ -434,7 +541,7 @@ export class AuthService {
   }
 
   // Check role-based permissions
-  private checkRolePermission(role: User['role'], permission: string, resource?: string, projectId?: string): boolean {
+  private checkRolePermission(role: User['role'], permission: string, _resource?: string, _projectId?: string): boolean {
     const rolePermissions: Record<User['role'], string[]> = {
       super_admin: ['*'],
       admin: [

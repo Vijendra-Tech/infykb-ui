@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { User, Organization, Session, db, initializeDatabase } from '@/lib/database';
 import { authService, LoginCredentials, RegisterCredentials } from '@/lib/auth-service';
-import { organizationService } from '@/lib/organization-service';
+
 
 interface AuthState {
   // State
@@ -149,13 +149,25 @@ export const useDexieAuthStore = create<AuthState>((set, get) => ({
       // Initialize database with seed data
       await initializeDatabase();
       
-      // Try to restore session
+      console.log('🔄 Initializing auth store and checking for existing session...');
+      
+      // Try to restore session with enhanced logging
       const session = await authService.getCurrentSession();
+      console.log('📋 Session restoration result:', session ? 'Found valid session' : 'No session found');
+      
       if (session) {
+        console.log('👤 Fetching user and organization data...');
         const user = await authService.getCurrentUser();
         const organization = await authService.getCurrentOrganization();
         
         if (user && organization) {
+          console.log('✅ Session restored successfully:', {
+            user: user.email,
+            role: user.role,
+            organization: organization.name,
+            sessionExpires: session.expiresAt
+          });
+          
           set({
             user,
             organization,
@@ -165,10 +177,13 @@ export const useDexieAuthStore = create<AuthState>((set, get) => ({
             error: null
           });
           return;
+        } else {
+          console.log('❌ Session found but user/organization data missing');
         }
       }
       
       // No valid session found
+      console.log('🚫 No valid session found, user needs to login');
       set({
         user: null,
         organization: null,
@@ -179,7 +194,7 @@ export const useDexieAuthStore = create<AuthState>((set, get) => ({
       });
       
     } catch (error) {
-      console.error('Auth initialization error:', error);
+      console.error('❌ Auth initialization error:', error);
       set({
         user: null,
         organization: null,

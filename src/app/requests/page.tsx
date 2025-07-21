@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/use-auth-store';
+import { useDexieAuthStore } from '@/store/use-dexie-auth-store';
 import { useOrganizationStore } from '@/store/use-organization-store';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,12 +31,12 @@ import Link from 'next/link';
 
 export default function RequestsPage() {
   const router = useRouter();
-  const { user, isAuthenticated } = useAuthStore();
+  const { user, isAuthenticated, isApprover, isInitialized, isLoading } = useDexieAuthStore();
   const { 
     accessRequests,
     members,
     projects,
-    isLoading, 
+    isLoading: orgLoading, 
     fetchAccessRequests,
     fetchMembers,
     fetchProjects,
@@ -51,13 +51,19 @@ export default function RequestsPage() {
   const [success, setSuccess] = useState('');
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    // Wait for auth initialization to complete
+    if (!isInitialized || isLoading) {
+      return;
+    }
+
+    // Check if user is authenticated
+    if (!user) {
       router.push('/auth/login');
       return;
     }
 
-    const canApprove = user?.role === 'admin' || user?.role === 'super_admin' || user?.role === 'approver';
-    if (!canApprove) {
+    // Check if user has approval permissions
+    if (!isApprover()) {
       router.push('/dashboard');
       return;
     }
@@ -65,7 +71,7 @@ export default function RequestsPage() {
     fetchAccessRequests();
     fetchMembers();
     fetchProjects();
-  }, [isAuthenticated, user, router, fetchAccessRequests, fetchMembers, fetchProjects]);
+  }, [user, isInitialized, isLoading, isApprover, router, fetchAccessRequests, fetchMembers, fetchProjects]);
 
   const handleApproveRequest = async (requestId: string) => {
     setError('');

@@ -10,9 +10,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 // import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Eye, EyeOff, Mail, Lock, LogIn, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, LogIn, AlertCircle, RefreshCw } from 'lucide-react';
 import { Logo } from '@/components/ui/logo';
 import { motion } from 'framer-motion';
+import { db, initializeDatabase } from '@/lib/database';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -31,22 +32,77 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
 
-    const result = await login({ 
-      email: formData.email, 
-      password: formData.password,
-      rememberMe: formData.rememberMe
-    });
+    // Validate input before attempting login
+    if (!formData.email?.trim() || !formData.password?.trim()) {
+      setError('Please enter both email and password');
+      return;
+    }
 
-    if (result.success) {
-      router.push('/dashboard');
-    } else {
-      setError(result.error || 'Login failed');
+    console.log('Login attempt:', { email: formData.email, password: formData.password });
+
+    try {
+      const result = await login({ 
+        email: formData.email.trim(), 
+        password: formData.password,
+        rememberMe: formData.rememberMe
+      });
+
+      console.log('Login result:', result);
+
+      if (result?.success) {
+        console.log('Login successful, redirecting to dashboard');
+        router.push('/dashboard');
+      } else {
+        // Handle different types of login failures gracefully
+        const errorMessage = result?.error || 'Login failed. Please check your credentials and try again.';
+        console.warn('Login failed:', errorMessage);
+        setError(errorMessage);
+      }
+    } catch (error) {
+      // Catch any unexpected errors to prevent UI breakage
+      console.error('Login error:', error);
+      setError('An unexpected error occurred. Please try again.');
     }
   };
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (error) setError(''); // Clear error when user starts typing
+  };
+
+  const resetDatabase = async () => {
+    try {
+      console.log('Resetting database...');
+      await db.delete();
+      await db.open();
+      await initializeDatabase();
+      console.log('Database reset complete');
+      
+      // Verify users were created
+      const userCount = await db.users.count();
+      const users = await db.users.toArray();
+      console.log('Users created:', userCount, users.map(u => ({ email: u.email, role: u.role })));
+      
+      setError(`Database reset successfully. ${userCount} users created. Try logging in again.`);
+    } catch (error) {
+      console.error('Database reset failed:', error);
+      setError('Database reset failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  };
+
+  const checkDatabase = async () => {
+    try {
+      const userCount = await db.users.count();
+      const users = await db.users.toArray();
+      console.log('Current database state:', {
+        userCount,
+        users: users.map(u => ({ email: u.email, role: u.role, passwordLength: u.password?.length }))
+      });
+      setError(`Database has ${userCount} users. Check console for details.`);
+    } catch (error) {
+      console.error('Database check failed:', error);
+      setError('Database check failed');
+    }
   };
 
   return (
@@ -107,12 +163,84 @@ export default function LoginPage() {
                     animate={{ opacity: 1, height: 'auto' }}
                     transition={{ duration: 0.3 }}
                   >
-                    <Alert variant="destructive">
+                    <Alert>
                       <AlertCircle className="h-4 w-4" />
                       <AlertDescription>{error}</AlertDescription>
                     </Alert>
                   </motion.div>
                 )}
+                
+                {/* Default Credentials Helper */}
+                <div className="space-y-2 p-4 bg-muted/30 rounded-lg border">
+                  <div className="flex justify-between items-center">
+                    <h4 className="text-sm font-medium text-muted-foreground">Test Credentials</h4>
+                    <div className="flex gap-1">
+                      <Button 
+                        type="button"
+                        variant="ghost" 
+                        size="sm"
+                        className="h-6 px-2 text-xs"
+                        onClick={checkDatabase}
+                      >
+                        Check DB
+                      </Button>
+                      <Button 
+                        type="button"
+                        variant="outline" 
+                        size="sm"
+                        className="h-6 px-2 text-xs"
+                        onClick={resetDatabase}
+                      >
+                        <RefreshCw className="h-3 w-3 mr-1" />
+                        Reset DB
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="grid gap-2 text-xs">
+                    <div className="flex justify-between items-center">
+                      <span>Admin:</span>
+                      <Button 
+                        type="button"
+                        variant="ghost" 
+                        size="sm"
+                        className="h-6 px-2 text-xs"
+                        onClick={() => {
+                          setFormData(prev => ({ ...prev, email: 'admin@example.com', password: 'admin123' }));
+                        }}
+                      >
+                        admin@example.com / admin123
+                      </Button>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span>Approver:</span>
+                      <Button 
+                        type="button"
+                        variant="ghost" 
+                        size="sm"
+                        className="h-6 px-2 text-xs"
+                        onClick={() => {
+                          setFormData(prev => ({ ...prev, email: 'approver@example.com', password: 'approver123' }));
+                        }}
+                      >
+                        approver@example.com / approver123
+                      </Button>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span>Member:</span>
+                      <Button 
+                        type="button"
+                        variant="ghost" 
+                        size="sm"
+                        className="h-6 px-2 text-xs"
+                        onClick={() => {
+                          setFormData(prev => ({ ...prev, email: 'member@example.com', password: 'member123' }));
+                        }}
+                      >
+                        member@example.com / member123
+                      </Button>
+                    </div>
+                  </div>
+                </div>
 
                 {/* Email Field */}
                 <div className="space-y-2">
@@ -202,10 +330,10 @@ export default function LoginPage() {
                 </Button>
 
                 <div className="text-center text-sm text-muted-foreground">
-                  Don't have an account?{' '}
+                  Don&apos;t have an account?{' '}
                   <Link
                     href="/auth/register"
-                    className="text-primary hover:underline font-medium"
+                    className="text-blue-600 hover:text-blue-500 font-medium"
                   >
                     Sign up
                   </Link>
@@ -215,19 +343,6 @@ export default function LoginPage() {
           </Card>
         </motion.div>
 
-        {/* Demo Credentials */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.6, duration: 0.5 }}
-          className="mt-6 p-4 bg-blue-50/50 dark:bg-slate-800/50 rounded-lg border border-blue-200/50 dark:border-slate-700"
-        >
-          <h3 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">Demo Credentials:</h3>
-          <div className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
-            <div><strong>Admin:</strong> admin@example.com / admin123</div>
-            <div><strong>Member:</strong> member@example.com / member123</div>
-          </div>
-        </motion.div>
       </motion.div>
     </div>
   );
