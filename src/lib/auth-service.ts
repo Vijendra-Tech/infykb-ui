@@ -81,6 +81,10 @@ export class AuthService {
         severity,
         userAgent: navigator.userAgent,
         ipAddress: 'localhost' // In production, get real IP
+        ,
+        updatedAt: undefined,
+        createdAt: undefined,
+        isActive: false
       });
     } catch (error) {
       console.error('Failed to create audit log:', error);

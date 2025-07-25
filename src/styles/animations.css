@@ -1,0 +1,478 @@
+/* Animation Control CSS - Global animation management */
+
+:root {
+  /* Default animation values */
+  --ui-animations-enabled: 1;
+  --ui-transition-duration: 300ms;
+  --ui-hover-effects: 1;
+  --ui-fade-effects: 1;
+  --ui-slide-effects: 1;
+  --ui-scale-effects: 1;
+  
+  /* Animation easing */
+  --ui-ease-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ui-ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ui-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* Conditional animation properties */
+  --transition-duration: calc(var(--ui-transition-duration) * var(--ui-animations-enabled));
+  --hover-scale: calc(1 + (0.05 * var(--ui-scale-effects) * var(--ui-animations-enabled)));
+  --hover-opacity: calc(0.8 + (0.2 * var(--ui-hover-effects) * var(--ui-animations-enabled)));
+}
+
+/* Global animation disable class - Aggressive approach */
+html.animations-disabled,
+html.animations-disabled *,
+html.animations-disabled *::before,
+html.animations-disabled *::after,
+body.animations-disabled,
+body.animations-disabled *,
+body.animations-disabled *::before,
+body.animations-disabled *::after,
+.animations-disabled,
+.animations-disabled *,
+.animations-disabled *::before,
+.animations-disabled *::after {
+  /* Completely disable all animations and transitions */
+  animation: none !important;
+  transition: none !important;
+  animation-duration: 0s !important;
+  animation-delay: 0s !important;
+  transition-duration: 0s !important;
+  transition-delay: 0s !important;
+  animation-play-state: paused !important;
+  animation-fill-mode: none !important;
+  animation-iteration-count: 0 !important;
+  
+  /* Disable CSS transforms that are animation-related */
+  transition-property: none !important;
+  animation-name: none !important;
+  
+  /* Force immediate state changes */
+  animation-timing-function: step-end !important;
+  transition-timing-function: step-end !important;
+}
+
+/* SELECTIVE hover, focus, and active state disabling - PRESERVE POSITIONING */
+html.animations-disabled .ui-card:hover,
+html.animations-disabled .ui-button:hover,
+html.animations-disabled .hover-scale:hover,
+html.animations-disabled .hover-lift:hover,
+body.animations-disabled .ui-card:hover,
+body.animations-disabled .ui-button:hover,
+body.animations-disabled .hover-scale:hover,
+body.animations-disabled .hover-lift:hover,
+.animations-disabled .ui-card:hover,
+.animations-disabled .ui-button:hover,
+.animations-disabled .hover-scale:hover,
+.animations-disabled .hover-lift:hover {
+  /* Disable animations but PRESERVE positioning transforms */
+  animation: none !important;
+  transition: none !important;
+  animation-duration: 0s !important;
+  transition-duration: 0s !important;
+  
+  /* Only reset animation-related transforms, NOT positioning transforms */
+  /* DO NOT use transform: none !important - this breaks dropdown positioning */
+}
+
+/* Preserve positioning for dropdowns and tooltips while disabling animations */
+html.animations-disabled [role="menu"],
+html.animations-disabled [data-radix-popper-content-wrapper],
+html.animations-disabled [data-radix-dropdown-content],
+html.animations-disabled [data-radix-tooltip-content],
+html.animations-disabled [data-radix-popover-content],
+body.animations-disabled [role="menu"],
+body.animations-disabled [data-radix-popper-content-wrapper],
+body.animations-disabled [data-radix-dropdown-content],
+body.animations-disabled [data-radix-tooltip-content],
+body.animations-disabled [data-radix-popover-content],
+.animations-disabled [role="menu"],
+.animations-disabled [data-radix-popper-content-wrapper],
+.animations-disabled [data-radix-dropdown-content],
+.animations-disabled [data-radix-tooltip-content],
+.animations-disabled [data-radix-popover-content] {
+  /* Allow positioning transforms but disable animation */
+  animation: none !important;
+  transition: none !important;
+  animation-duration: 0s !important;
+  transition-duration: 0s !important;
+}
+
+/* SELECTIVE Tailwind and custom class disabling - PRESERVE POSITIONING */
+html.animations-disabled .hover\:scale-105:hover,
+html.animations-disabled .hover\:scale-110:hover,
+html.animations-disabled .hover\:translate-y-1:hover,
+html.animations-disabled .hover\:translate-y-2:hover,
+html.animations-disabled .hover\:rotate-1:hover,
+html.animations-disabled .hover\:rotate-3:hover,
+html.animations-disabled .hover-scale:hover,
+html.animations-disabled .hover-lift:hover,
+body.animations-disabled .hover\:scale-105:hover,
+body.animations-disabled .hover\:scale-110:hover,
+body.animations-disabled .hover\:translate-y-1:hover,
+body.animations-disabled .hover\:translate-y-2:hover,
+body.animations-disabled .hover\:rotate-1:hover,
+body.animations-disabled .hover\:rotate-3:hover,
+body.animations-disabled .hover-scale:hover,
+body.animations-disabled .hover-lift:hover,
+.animations-disabled .hover\:scale-105:hover,
+.animations-disabled .hover\:scale-110:hover,
+.animations-disabled .hover\:translate-y-1:hover,
+.animations-disabled .hover\:translate-y-2:hover,
+.animations-disabled .hover\:rotate-1:hover,
+.animations-disabled .hover\:rotate-3:hover,
+.animations-disabled .hover-scale:hover,
+.animations-disabled .hover-lift:hover {
+  /* Disable animations and transitions but PRESERVE positioning transforms */
+  animation: none !important;
+  transition: none !important;
+  animation-duration: 0s !important;
+  transition-duration: 0s !important;
+  /* DO NOT disable transform - this breaks dropdown positioning */
+}
+
+/* Disable Framer Motion and other JS animation libraries */
+html.animations-disabled [data-framer-motion],
+html.animations-disabled [style*="transform"],
+body.animations-disabled [data-framer-motion],
+body.animations-disabled [style*="transform"],
+.animations-disabled [data-framer-motion],
+.animations-disabled [style*="transform"] {
+  animation: none !important;
+  transition: none !important;
+  animation-duration: 0s !important;
+  transition-duration: 0s !important;
+}
+
+/* Disable all Tailwind CSS animations when animations are disabled */
+html.animations-disabled .animate-spin,
+html.animations-disabled .animate-pulse,
+html.animations-disabled .animate-bounce,
+html.animations-disabled .animate-ping,
+html.animations-disabled .animate-fade-in,
+html.animations-disabled .animate-fade-out,
+html.animations-disabled .animate-slide-in,
+html.animations-disabled .animate-slide-out,
+body.animations-disabled .animate-spin,
+body.animations-disabled .animate-pulse,
+body.animations-disabled .animate-bounce,
+body.animations-disabled .animate-ping,
+body.animations-disabled .animate-fade-in,
+body.animations-disabled .animate-fade-out,
+body.animations-disabled .animate-slide-in,
+body.animations-disabled .animate-slide-out,
+.animations-disabled .animate-spin,
+.animations-disabled .animate-pulse,
+.animations-disabled .animate-bounce,
+.animations-disabled .animate-ping,
+.animations-disabled .animate-fade-in,
+.animations-disabled .animate-fade-out,
+.animations-disabled .animate-slide-in,
+.animations-disabled .animate-slide-out {
+  animation: none !important;
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  animation-delay: 0ms !important;
+  animation-fill-mode: none !important;
+  animation-play-state: paused !important;
+}
+
+/* Selectively disable hover and focus effects while preserving positioning */
+html.animations-disabled .hover-scale:hover,
+html.animations-disabled .hover-lift:hover,
+html.animations-disabled .ui-button:hover,
+html.animations-disabled .ui-card:hover,
+html.animations-disabled [class*="hover:scale"]:hover,
+html.animations-disabled [class*="hover:translate"]:hover,
+html.animations-disabled [class*="group-hover:scale"]:hover,
+html.animations-disabled [class*="group-hover:translate"]:hover,
+body.animations-disabled .hover-scale:hover,
+body.animations-disabled .hover-lift:hover,
+body.animations-disabled .ui-button:hover,
+body.animations-disabled .ui-card:hover,
+body.animations-disabled [class*="hover:scale"]:hover,
+body.animations-disabled [class*="hover:translate"]:hover,
+body.animations-disabled [class*="group-hover:scale"]:hover,
+body.animations-disabled [class*="group-hover:translate"]:hover,
+.animations-disabled .hover-scale:hover,
+.animations-disabled .hover-lift:hover,
+.animations-disabled .ui-button:hover,
+.animations-disabled .ui-card:hover,
+.animations-disabled [class*="hover:scale"]:hover,
+.animations-disabled [class*="hover:translate"]:hover,
+.animations-disabled [class*="group-hover:scale"]:hover,
+.animations-disabled [class*="group-hover:translate"]:hover {
+  transform: none !important;
+  transition: none !important;
+  scale: 1 !important;
+}
+
+/* Disable framer-motion hover animations but preserve positioning */
+.animations-disabled [data-framer-motion]:hover {
+  /* Only disable animation-related transforms, preserve positioning */
+  scale: 1 !important;
+}
+
+/* Preserve dropdown and menu positioning by not disabling all transforms */
+.animations-disabled [role="menu"],
+.animations-disabled [role="menuitem"],
+.animations-disabled [data-radix-popper-content-wrapper],
+.animations-disabled [data-side],
+.animations-disabled .dropdown-content,
+.animations-disabled .popover-content,
+.animations-disabled .tooltip-content {
+  /* Allow positioning transforms but disable transitions */
+  transition: none !important;
+  animation: none !important;
+}
+
+/* Respect system preference for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --ui-animations-enabled: 0;
+    --ui-transition-duration: 0ms;
+  }
+  
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Enhanced button animations with animation control */
+.ui-button {
+  transition: all var(--transition-duration) var(--ui-ease-out);
+}
+
+.ui-button:hover {
+  transform: scale(var(--hover-scale));
+  opacity: var(--hover-opacity);
+}
+
+/* Enhanced card animations */
+.ui-card {
+  transition: all var(--transition-duration) var(--ui-ease-out);
+}
+
+.ui-card:hover {
+  transform: translateY(calc(-2px * var(--ui-slide-effects) * var(--ui-animations-enabled)));
+  box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Enhanced input animations */
+.ui-input {
+  transition: all var(--transition-duration) var(--ui-ease-out);
+}
+
+.ui-input:focus {
+  transform: scale(calc(1 + (0.02 * var(--ui-scale-effects) * var(--ui-animations-enabled))));
+}
+
+/* Enhanced dropdown animations */
+.ui-dropdown-content {
+  animation-duration: var(--transition-duration);
+  animation-timing-function: var(--ui-ease-out);
+}
+
+/* Enhanced modal animations */
+.ui-modal-overlay {
+  animation-duration: var(--transition-duration);
+  animation-timing-function: var(--ui-ease-out);
+}
+
+.ui-modal-content {
+  animation-duration: var(--transition-duration);
+  animation-timing-function: var(--ui-ease-out);
+}
+
+/* Enhanced sidebar animations */
+.ui-sidebar {
+  transition: all var(--transition-duration) var(--ui-ease-out);
+}
+
+.ui-sidebar-item {
+  transition: all var(--transition-duration) var(--ui-ease-out);
+}
+
+.ui-sidebar-item:hover {
+  transform: translateX(calc(4px * var(--ui-slide-effects) * var(--ui-animations-enabled)));
+  background-color: rgba(0, 0, 0, calc(0.05 * var(--ui-hover-effects) * var(--ui-animations-enabled)));
+}
+
+/* Enhanced loading animations */
+.ui-loading-spinner {
+  animation-duration: calc(1s * var(--ui-animations-enabled) + 0.01ms);
+  animation-iteration-count: infinite;
+}
+
+/* Enhanced fade animations */
+.ui-fade-in {
+  animation-duration: var(--transition-duration);
+  animation-timing-function: var(--ui-ease-out);
+  opacity: calc(var(--ui-fade-effects) * var(--ui-animations-enabled));
+}
+
+.ui-fade-out {
+  animation-duration: var(--transition-duration);
+  animation-timing-function: var(--ui-ease-in);
+  opacity: calc(1 - (var(--ui-fade-effects) * var(--ui-animations-enabled)));
+}
+
+/* Enhanced slide animations */
+.ui-slide-up {
+  transform: translateY(calc(-10px * var(--ui-slide-effects) * var(--ui-animations-enabled)));
+  transition: transform var(--transition-duration) var(--ui-ease-out);
+}
+
+.ui-slide-down {
+  transform: translateY(calc(10px * var(--ui-slide-effects) * var(--ui-animations-enabled)));
+  transition: transform var(--transition-duration) var(--ui-ease-out);
+}
+
+.ui-slide-left {
+  transform: translateX(calc(-10px * var(--ui-slide-effects) * var(--ui-animations-enabled)));
+  transition: transform var(--transition-duration) var(--ui-ease-out);
+}
+
+.ui-slide-right {
+  transform: translateX(calc(10px * var(--ui-slide-effects) * var(--ui-animations-enabled)));
+  transition: transform var(--transition-duration) var(--ui-ease-out);
+}
+
+/* Enhanced scale animations */
+.ui-scale-in {
+  transform: scale(calc(0.95 + (0.05 * var(--ui-scale-effects) * var(--ui-animations-enabled))));
+  transition: transform var(--transition-duration) var(--ui-ease-out);
+}
+
+.ui-scale-out {
+  transform: scale(calc(1.05 - (0.05 * var(--ui-scale-effects) * var(--ui-animations-enabled))));
+  transition: transform var(--transition-duration) var(--ui-ease-out);
+}
+
+/* Enhanced table row animations */
+.ui-table-row {
+  transition: all var(--transition-duration) var(--ui-ease-out);
+}
+
+.ui-table-row:hover {
+  background-color: rgba(0, 0, 0, calc(0.05 * var(--ui-hover-effects) * var(--ui-animations-enabled)));
+  transform: scale(calc(1 + (0.01 * var(--ui-scale-effects) * var(--ui-animations-enabled))));
+}
+
+/* Enhanced navigation animations */
+.ui-nav-item {
+  transition: all var(--transition-duration) var(--ui-ease-out);
+  position: relative;
+}
+
+.ui-nav-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: calc(3px * var(--ui-slide-effects) * var(--ui-animations-enabled));
+  background: currentColor;
+  transform: scaleY(0);
+  transition: transform var(--transition-duration) var(--ui-ease-out);
+}
+
+.ui-nav-item:hover::before,
+.ui-nav-item.active::before {
+  transform: scaleY(1);
+}
+
+/* Enhanced progress bar animations */
+.ui-progress-bar {
+  transition: all var(--transition-duration) var(--ui-ease-out);
+}
+
+.ui-progress-fill {
+  transition: width var(--transition-duration) var(--ui-ease-out);
+}
+
+/* Enhanced tooltip animations */
+.ui-tooltip {
+  animation-duration: var(--transition-duration);
+  animation-timing-function: var(--ui-ease-out);
+}
+
+/* Enhanced badge animations */
+.ui-badge {
+  transition: all var(--transition-duration) var(--ui-ease-out);
+}
+
+.ui-badge:hover {
+  transform: scale(var(--hover-scale));
+}
+
+/* Enhanced form animations */
+.ui-form-group {
+  transition: all var(--transition-duration) var(--ui-ease-out);
+}
+
+.ui-form-label {
+  transition: all var(--transition-duration) var(--ui-ease-out);
+}
+
+.ui-form-input:focus + .ui-form-label {
+  transform: translateY(calc(-4px * var(--ui-slide-effects) * var(--ui-animations-enabled)));
+  color: var(--primary);
+}
+
+/* Utility classes for manual animation control */
+.animate-when-enabled {
+  transition: all var(--transition-duration) var(--ui-ease-out);
+}
+
+.hover-lift:hover {
+  transform: translateY(calc(-2px * var(--ui-slide-effects) * var(--ui-animations-enabled)));
+}
+
+.hover-scale:hover {
+  transform: scale(var(--hover-scale));
+}
+
+.hover-fade:hover {
+  opacity: var(--hover-opacity);
+}
+
+/* Focus animations for accessibility */
+.ui-focus-ring:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  transition: outline var(--transition-duration) var(--ui-ease-out);
+}
+
+/* Loading state animations */
+.ui-loading {
+  position: relative;
+  overflow: hidden;
+}
+
+.ui-loading::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  animation: shimmer calc(2s * var(--ui-animations-enabled) + 0.01ms) infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}

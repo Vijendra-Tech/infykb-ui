@@ -23,10 +23,10 @@ export interface IngestedDataInfo {
  * Fetch ingested data information from Azure Function
  * @returns Promise with array of ingested data information
  */
-export async function fetchIngestedData(): Promise<IngestedDataInfo[]> {
+export async function callAzureFunction(functionName: string, data: Record<string, any>): Promise<IngestedDataInfo[]> {
   try {
     // Build the URL with function key if available
-    let url = `${AZURE_FUNCTION_BASE_URL}/api/GetIngestedData`;
+    let url = `${AZURE_FUNCTION_BASE_URL}/api/${functionName}`;
     if (AZURE_FUNCTION_KEY) {
       url += `?code=${AZURE_FUNCTION_KEY}`;
     }

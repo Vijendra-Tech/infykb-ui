@@ -5,10 +5,7 @@ import Link from "next/link";
 import { 
   User, 
   LogOut, 
-  Globe, 
-  Code, 
   HelpCircle, 
-  ChevronRight, 
   ShieldCheck, 
   Edit3,
   Settings
@@ -16,9 +13,7 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";

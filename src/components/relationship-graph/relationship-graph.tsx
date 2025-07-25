@@ -12,8 +12,6 @@ import {
   Panel,
   MarkerType,
   NodeTypes,
-  Node,
-  Edge,
   Connection,
   BackgroundVariant,
 } from '@xyflow/react';
@@ -22,25 +20,25 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Search, ZoomIn, ZoomOut, Maximize2, RefreshCw } from 'lucide-react';
+import { Search, Maximize2, RefreshCw } from 'lucide-react';
 // Import the custom node component
 import CustomNode from './custom-node';
 
-// Define node data types
-type NodeType = 'Bug' | 'Story' | 'HLD' | 'Task' | 'Epic' | 'Requirement';
-type StatusType = 'Open' | 'In Progress' | 'Done' | 'Closed' | 'Approved' | 'Rejected';
-type PriorityType = 'Low' | 'Medium' | 'High' | 'Critical';
+// Define node data types (commented out as unused)
+// type NodeType = 'Bug' | 'Story' | 'HLD' | 'Task' | 'Epic' | 'Requirement';
+// type StatusType = 'Open' | 'In Progress' | 'Done' | 'Closed' | 'Approved' | 'Rejected';
+// type PriorityType = 'Low' | 'Medium' | 'High' | 'Critical';
 
-interface CustomNodeData {
-  label: string;
-  type: NodeType;
-  id: string;
-  description: string;
-  status: StatusType;
-  priority?: PriorityType;
-  points?: number;
-  version?: string;
-}
+// interface CustomNodeData {
+//   label: string;
+//   type: NodeType;
+//   id: string;
+//   description: string;
+//   status: StatusType;
+//   priority?: PriorityType;
+//   points?: number;
+//   version?: string;
+// }
 
 // Define custom node types
 const nodeTypes: NodeTypes = {
@@ -182,9 +180,10 @@ export function RelationshipGraph() {
   const [isLoading, setIsLoading] = useState(false);
 
   // Handle connections between nodes
-  const onConnect = useCallback((params: any) => {
+  const onConnect = useCallback((params: Connection) => {
     setEdges((eds) => addEdge({ 
-      ...params, 
+      ...params,
+      id: `${params.source}-${params.target}`,
       animated: true,
       label: 'relates to',
       labelBgStyle: { fill: '#f3f4f6' },

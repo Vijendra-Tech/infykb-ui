@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { User, Organization, Session, db, initializeDatabase } from '@/lib/database';
+import { User, Organization, Session, initializeDatabase } from '@/lib/database';
 import { authService, LoginCredentials, RegisterCredentials } from '@/lib/auth-service';
 
 

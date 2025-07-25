@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Search, Edit, Sparkles, RefreshCcw, History, Menu, X, Home, BotIcon, Database, Clock, BarChart, FileText, Settings, LogOut, LogIn, Users, Building, UserCheck } from "lucide-react";
 import { ModeToggle } from "@/components/mode-toggle";
+import { AnimationToggle, SimpleAnimationToggle } from "@/components/animation-toggle";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
 import { useSidebar } from "@/context/sidebar-context";
 import { Logo } from "@/components/ui/logo";
@@ -13,6 +14,7 @@ import { useChatHistoryStore } from "@/store/use-chat-history-store";
 import { useRoleStore } from "@/store/use-role-store";
 import { useDexieAuthStore } from '@/store/use-dexie-auth-store';
 import { motion, AnimatePresence } from "framer-motion";
+import { useAnimation } from "@/components/animation-provider";
 
 interface MobileMenuItemProps {
   icon: React.ReactNode;
@@ -24,17 +26,14 @@ interface MobileMenuItemProps {
 }
 
 function MobileMenuItem({ icon, label, href, active, badge, onClick }: MobileMenuItemProps) {
-  const itemVariants = {
-    hidden: { opacity: 0, y: -10 },
-    visible: { opacity: 1, y: 0 }
-  };
+  const { getMotionProps } = useAnimation();
+  const motionProps = getMotionProps('slide');
   
   const content = (
     <motion.div
-      className={`flex items-center gap-3 px-3 py-2 rounded-md ${active ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
-      variants={itemVariants}
-      whileHover={{ backgroundColor: active ? undefined : 'var(--muted)' }}
-      whileTap={{ scale: 0.98 }}
+      className={`flex items-center gap-3 px-3 py-2 rounded-md ${active ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'} animate-when-enabled`}
+      {...motionProps}
+      {...getMotionProps('hover')}
     >
       <span className={active ? 'text-primary-foreground' : 'text-muted-foreground'}>
         {icon}
@@ -65,6 +64,7 @@ export function Header() {
   const { addChat } = useChatHistoryStore();
   const { role } = useRoleStore();
   const { user, isAuthenticated, logout, isAdmin, isApprover } = useDexieAuthStore();
+  const { getMotionProps } = useAnimation();
   
   // Handle responsive view detection
   useEffect(() => {
@@ -123,6 +123,7 @@ export function Header() {
                 <span className="sr-only">New Chat</span>
               </Button>
               <ModeToggle />
+              <AnimationToggle />
               
               {/* User Profile with Logout */}
               <div className="relative">
@@ -177,6 +178,7 @@ export function Header() {
             /* Not Authenticated - Show Login Button */
             <>
               <ModeToggle />
+              <AnimationToggle />
               <Button 
                 variant="default" 
                 size="sm" 
@@ -292,6 +294,11 @@ export function Header() {
                         <ModeToggle />
                       </div>
                       
+                      <div className="flex items-center justify-between px-3 py-2">
+                        <span className="text-sm font-medium">Animations</span>
+                        <AnimationToggle />
+                      </div>
+                      
                       <div className="h-px bg-border my-1" />
                       
                       <MobileMenuItem 
@@ -319,6 +326,11 @@ export function Header() {
                       <div className="flex items-center justify-between px-3 py-2">
                         <span className="text-sm font-medium">Theme</span>
                         <ModeToggle />
+                      </div>
+                      
+                      <div className="flex items-center justify-between px-3 py-2">
+                        <span className="text-sm font-medium">Animations</span>
+                        <AnimationToggle />
                       </div>
                     </>
                   )}

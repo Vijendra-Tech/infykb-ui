@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import "@/styles/animations.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { AnimationProvider } from "@/components/animation-provider";
 import { LayoutWrapper } from "@/components/layout-wrapper";
 import { Toaster } from "@/components/ui/toaster";
+import { cn } from "@/lib/utils";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -41,10 +44,14 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <LayoutWrapper>
-            {children}
-          </LayoutWrapper>
-          <Toaster />
+          <AnimationProvider>
+            <div className={cn("min-h-screen bg-background font-sans antialiased", geistSans.variable)}>
+              <LayoutWrapper>
+                {children}
+              </LayoutWrapper>
+            </div>
+            <Toaster />
+          </AnimationProvider>
         </ThemeProvider>
       </body>
     </html>

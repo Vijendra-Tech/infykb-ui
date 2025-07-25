@@ -10,8 +10,7 @@ import {
   Menu,
   Briefcase,
   LayoutDashboard,
-  Cpu,
-  MessageSquare
+  Cpu
 } from "lucide-react";
 import {
   Tooltip,

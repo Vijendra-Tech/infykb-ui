@@ -14,7 +14,7 @@ export interface User {
   lastLogin?: Date;
   createdAt: Date;
   updatedAt: Date;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface Organization {
@@ -33,7 +33,7 @@ export interface Organization {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface Project {
@@ -54,7 +54,7 @@ export interface Project {
       apiVersion: string;
       embeddingModel?: string;
     };
-    settings?: Record<string, any>;
+    settings?: Record<string, unknown>;
   };
   permissions: {
     allowedRoles: string[];
@@ -62,7 +62,7 @@ export interface Project {
   };
   createdAt: Date;
   updatedAt: Date;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface ProjectMember {
@@ -75,7 +75,7 @@ export interface ProjectMember {
   addedBy: string;
   addedAt: Date;
   isActive: boolean;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface AccessRequest {
@@ -93,7 +93,7 @@ export interface AccessRequest {
   reviewNotes?: string;
   expiresAt?: Date;
   requestedAt: Date;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface Session {
@@ -122,7 +122,7 @@ export interface UserPermission {
   permission: string;
   resource: string;
   action: string;
-  conditions?: Record<string, any>;
+  conditions?: Record<string, unknown>;
   grantedBy: string;
   grantedAt: Date;
   expiresAt?: Date;
@@ -130,6 +130,9 @@ export interface UserPermission {
 }
 
 export interface AuditLog {
+  updatedAt: any;
+  createdAt: any;
+  isActive: boolean;
   id?: number;
   uuid: string;
   userId?: string;
@@ -137,7 +140,7 @@ export interface AuditLog {
   action: string;
   resource: string;
   resourceId?: string;
-  details: Record<string, any>;
+  details: Record<string, unknown>;
   ipAddress?: string;
   userAgent?: string;
   timestamp: Date;
@@ -157,7 +160,7 @@ export interface ApiKey {
   lastUsedAt?: Date;
   expiresAt?: Date;
   createdAt: Date;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 // Database Class
@@ -188,29 +191,29 @@ export class AppDatabase extends Dexie {
     });
 
     // Hooks for automatic timestamps and UUIDs
-    this.users.hook('creating', function (primKey, obj, trans) {
+    this.users.hook('creating', function (_primKey, obj, _trans) {
       obj.uuid = obj.uuid || generateUUID();
       obj.createdAt = obj.createdAt || new Date();
       obj.updatedAt = new Date();
       obj.isActive = obj.isActive !== undefined ? obj.isActive : true;
     });
 
-    this.users.hook('updating', function (modifications, primKey, obj, trans) {
+    this.users.hook('updating', function (modifications, _primKey, _obj, _trans) {
       (modifications as any).updatedAt = new Date();
     });
 
-    this.organizations.hook('creating', function (primKey, obj, trans) {
+    this.organizations.hook('creating', function (_primKey, obj, _trans) {
       obj.uuid = obj.uuid || generateUUID();
       obj.createdAt = obj.createdAt || new Date();
       obj.updatedAt = new Date();
       obj.isActive = obj.isActive !== undefined ? obj.isActive : true;
     });
 
-    this.organizations.hook('updating', function (modifications, primKey, obj, trans) {
-      (modifications as any).updatedAt = new Date();
+    this.organizations.hook('updating', function (modifications, _primKey, _obj, _trans) {
+      (modifications as Record<string, unknown>).updatedAt = new Date();
     });
 
-    this.projects.hook('creating', function (primKey, obj, trans) {
+    this.projects.hook('creating', function (_primKey, obj, _trans) {
       obj.uuid = obj.uuid || generateUUID();
       obj.createdAt = obj.createdAt || new Date();
       obj.updatedAt = new Date();

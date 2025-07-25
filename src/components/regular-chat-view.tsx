@@ -6,7 +6,6 @@ import {
   Sparkles, 
   Send, 
   ChevronDown, 
-  MessageSquare, 
   Check,
   Clock
 } from "lucide-react";
@@ -209,7 +208,7 @@ export function RegularChatView() {
                     onClick={() => setInputValue("What's new?")}
                     className="bg-background/80 border-primary/20 hover:bg-background shadow-sm"
                   >
-                    What's new
+                    What&apos;s new
                   </Button>
                 </div>
               </motion.div>

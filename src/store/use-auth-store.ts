@@ -177,7 +177,8 @@ export const useAuthStore = create<AuthStore>()(
             set({ isLoading: false });
             return { success: false, error: 'Invalid email or password' };
           }
-        } catch (error) {
+        } catch (_error) {
+          console.error('Failed to sign in:', _error);
           set({ isLoading: false });
           return { success: false, error: 'Login failed. Please try again.' };
         }
@@ -201,7 +202,8 @@ export const useAuthStore = create<AuthStore>()(
             set({ isLoading: false });
             return { success: false, error: 'Registration failed. Please check your details.' };
           }
-        } catch (error) {
+        } catch (_error) {
+          console.error('Failed to sign in:', _error);
           set({ isLoading: false });
           return { success: false, error: 'Registration failed. Please try again.' };
         }

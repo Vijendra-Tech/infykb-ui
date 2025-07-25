@@ -72,7 +72,10 @@ export class OrganizationService {
         timestamp: new Date(),
         severity,
         userAgent: navigator.userAgent,
-        ipAddress: 'localhost'
+        ipAddress: 'localhost',
+        updatedAt: undefined,
+        createdAt: undefined,
+        isActive: false
       });
     } catch (error) {
       console.error('Failed to create audit log:', error);
