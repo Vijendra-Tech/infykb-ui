@@ -1119,7 +1119,7 @@ export const LangchainChatInterface: React.FC<{ hideInput?: boolean }> = ({ hide
             
             {/* Input area */}
             <div className="relative">
-              <div className="relative flex items-end bg-background rounded-xl shadow-sm border border-muted/50 transition-all hover:border-primary/30 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20 overflow-hidden">
+              <div className="relative bg-background rounded-xl shadow-sm border border-muted/50 transition-all hover:border-primary/30 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20">
                 <textarea
                   ref={textareaRef}
                   value={inputValue}
@@ -1128,11 +1128,11 @@ export const LangchainChatInterface: React.FC<{ hideInput?: boolean }> = ({ hide
                   onFocus={handleInputFocus}
                   onClick={handleInputFocus}
                   placeholder="Type your message..."
-                  className="w-full bg-transparent px-4 pt-3 pb-2 pr-16 text-sm focus:outline-none min-h-[60px] max-h-[200px] resize-none custom-scrollbar"
+                  className="w-full bg-transparent px-4 py-3 pr-12 text-sm focus:outline-none min-h-[60px] max-h-[200px] resize-none custom-scrollbar leading-relaxed"
                   rows={1}
                   disabled={isLoading}
                 />
-                <div className="absolute right-2 bottom-2 flex space-x-1">
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center space-x-1">
                   <Button
                     size="icon"
                     variant="ghost"

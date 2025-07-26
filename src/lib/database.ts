@@ -163,6 +163,38 @@ export interface ApiKey {
   metadata?: Record<string, unknown>;
 }
 
+export interface GitHubIssue {
+  id?: number;
+  uuid: string;
+  githubId: number;
+  number: number;
+  title: string;
+  body?: string;
+  state: 'open' | 'closed';
+  html_url: string;
+  repository: string;
+  user: {
+    login: string;
+    avatar_url: string;
+  };
+  labels: Array<{
+    name: string;
+    color: string;
+  }>;
+  assignees: Array<{
+    login: string;
+    avatar_url: string;
+  }>;
+  created_at: string;
+  updated_at: string;
+  closed_at?: string;
+  comments: number;
+  syncedAt: Date;
+  organizationId: string;
+  projectId?: string;
+  metadata?: Record<string, unknown>;
+}
+
 // Database Class
 export class AppDatabase extends Dexie {
   users!: Table<User>;
@@ -174,11 +206,12 @@ export class AppDatabase extends Dexie {
   userPermissions!: Table<UserPermission>;
   auditLogs!: Table<AuditLog>;
   apiKeys!: Table<ApiKey>;
+  githubIssues!: Table<GitHubIssue>;
 
   constructor() {
     super('InfinityKBDatabase');
     
-    this.version(1).stores({
+    this.version(2).stores({
       users: '++id, uuid, email, organizationId, role, isActive, createdAt',
       organizations: '++id, uuid, name, domain, ownerId, isActive, createdAt',
       projects: '++id, uuid, name, organizationId, createdBy, status, createdAt',
@@ -187,7 +220,8 @@ export class AppDatabase extends Dexie {
       sessions: '++id, uuid, userId, token, isActive, expiresAt, createdAt',
       userPermissions: '++id, uuid, userId, organizationId, projectId, permission, isActive',
       auditLogs: '++id, uuid, userId, organizationId, action, timestamp',
-      apiKeys: '++id, uuid, userId, organizationId, projectId, isActive, createdAt'
+      apiKeys: '++id, uuid, userId, organizationId, projectId, isActive, createdAt',
+      githubIssues: '++id, uuid, githubId, number, repository, state, organizationId, syncedAt'
     });
 
     // Hooks for automatic timestamps and UUIDs
@@ -246,6 +280,9 @@ export class AppDatabase extends Dexie {
         } else if (tableName === 'apiKeys') {
           obj.createdAt = obj.createdAt || new Date();
           obj.isActive = obj.isActive !== undefined ? obj.isActive : true;
+        } else if (tableName === 'githubIssues') {
+          obj.uuid = obj.uuid || generateUUID();
+          obj.syncedAt = obj.syncedAt || new Date();
         }
       });
     });

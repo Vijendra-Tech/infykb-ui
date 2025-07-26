@@ -23,6 +23,16 @@ export interface IngestedDataInfo {
  * Fetch ingested data information from Azure Function
  * @returns Promise with array of ingested data information
  */
+export async function fetchIngestedData(): Promise<IngestedDataInfo[]> {
+  return callAzureFunction('GetIngestedData', {});
+}
+
+/**
+ * Generic function to call Azure Functions
+ * @param functionName Name of the Azure function to call
+ * @param data Data to send to the function
+ * @returns Promise with array of ingested data information
+ */
 export async function callAzureFunction(functionName: string, data: Record<string, any>): Promise<IngestedDataInfo[]> {
   try {
     // Build the URL with function key if available
