@@ -600,35 +600,35 @@ ${query}
         questions.push(
           'What TypeScript version are you using?',
           'Can you provide a minimal code example?',
-          'What error message are you seeing?'
+          'Create GitHub Issue for this bug'
         );
         break;
       case 'feature_request':
         questions.push(
           'What problem would this feature solve?',
           'Have you considered any workarounds?',
-          'Would this be a breaking change?'
+          'Create GitHub Issue for this feature request'
         );
         break;
       case 'performance':
         questions.push(
           'How large is your codebase?',
           'Are you using project references?',
-          'What build tools are you using?'
+          'Create GitHub Issue for performance problem'
         );
         break;
       case 'configuration':
         questions.push(
           'What is your current tsconfig.json?',
           'Are you migrating from JavaScript?',
-          'What build target do you need?'
+          'Create GitHub Issue for configuration help'
         );
         break;
       default:
         questions.push(
           'Can you provide more details?',
           'What have you tried so far?',
-          'Is this blocking your development?'
+          'Create GitHub Issue for this question'
         );
     }
 

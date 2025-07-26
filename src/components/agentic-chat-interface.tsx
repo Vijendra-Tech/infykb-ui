@@ -52,7 +52,14 @@ import {
 } from "lucide-react";
 
 import { GitHubIssue, githubService, formatIssueDate } from "@/lib/github-service";
+import { enhancedGitHubService, MultiRepoSearchResult } from "@/lib/enhanced-github-service";
 import { agenticAI, AnalysisResult, SolutionSuggestion } from "@/lib/agentic-ai-service";
+import { 
+  CodeSnippetCard, 
+  GitHubIssueCreator, 
+  EnhancedIssueSearch, 
+  AgenticActionSuggestions 
+} from "@/components/generative-ui-components";
 import { useToast } from "@/components/ui/use-toast";
 import { db } from "@/lib/database";
 import { useLiveQuery } from "dexie-react-hooks";
@@ -67,8 +74,10 @@ interface Message {
     analysis?: AnalysisResult;
     suggestions?: SolutionSuggestion[];
     relatedIssues?: GitHubIssue[];
+    enhancedIssues?: MultiRepoSearchResult[];
     confidence?: number;
     followUpQuestions?: string[];
+    showGenerativeActions?: boolean;
   };
 }
 
@@ -100,6 +109,8 @@ export function AgenticChatInterface({ className }: AgenticChatProps) {
   const [headerVisible, setHeaderVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   const [showGitHubSettings, setShowGitHubSettings] = useState(false);
+  const [showGitHubIssueCreator, setShowGitHubIssueCreator] = useState(false);
+  const [gitHubIssueContext, setGitHubIssueContext] = useState<any>(null);
   const [gitHubSettings, setGitHubSettings] = useState({
     syncEnabled: false,
     autoSync: true,
@@ -182,7 +193,7 @@ export function AgenticChatInterface({ className }: AgenticChatProps) {
 
     const userMessage: Message = {
       id: Date.now().toString(),
-      content: inputValue,
+      content: inputValue.trim(),
       sender: 'user',
       timestamp: new Date(),
       type: 'text'
@@ -193,72 +204,55 @@ export function AgenticChatInterface({ className }: AgenticChatProps) {
     setIsLoading(true);
     setIsTyping(true);
 
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-    }
-
     try {
-      const analysis = await agenticAI.analyzeQuery(inputValue);
+      // Analyze the user's query
+      const analysis = await agenticAI.analyzeQuery(userMessage.content);
       
+      // Enhanced multi-repository issue search
+      const [legacyIssues, enhancedIssues] = await Promise.all([
+        githubService.searchIssues(userMessage.content, {
+          limit: 5,
+          minRelevance: 0.3
+        }),
+        enhancedGitHubService.searchByMessageContent(userMessage.content)
+      ]);
+
+      // Create assistant response with enhanced metadata
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         content: analysis.response,
         sender: 'assistant',
         timestamp: new Date(),
-        type: analysis.type,
+        type: 'analysis',
         metadata: {
           analysis,
           suggestions: analysis.suggestions,
+          relatedIssues: legacyIssues,
+          enhancedIssues: enhancedIssues,
           confidence: analysis.confidence,
-          followUpQuestions: analysis.followUpQuestions
+          followUpQuestions: analysis.followUpQuestions,
+          showGenerativeActions: true
         }
       };
 
       setMessages(prev => [...prev, assistantMessage]);
+      setRelatedIssues([...legacyIssues, ...enhancedIssues.map(r => r.issue)]);
       
-      const allIssues = analysis.suggestions
-        .filter(s => s.relatedIssues)
-        .flatMap(s => s.relatedIssues || []);
-      setRelatedIssues(allIssues);
+      // Update knowledge graph (simplified)
+      const newNodes: KnowledgeGraphNode[] = [
+        {
+          id: `query-${Date.now()}`,
+          label: analysis.intent.replace('_', ' '),
+          type: 'concept',
+          description: userMessage.content.substring(0, 100),
+          connections: analysis.keywords
+        }
+      ];
       
-      // Generate mock knowledge graph nodes for demonstration
-      if (analysis.suggestions.length > 0) {
-        const mockNodes: KnowledgeGraphNode[] = [
-          {
-            id: '1',
-            label: 'TypeScript Error',
-            type: 'concept',
-            description: 'Common TypeScript compilation errors',
-            connections: ['2', '3']
-          },
-          {
-            id: '2',
-            label: 'Type Assignment',
-            type: 'solution',
-            description: 'Solutions for type assignment issues',
-            connections: ['1', '4']
-          },
-          {
-            id: '3',
-            label: 'Interface Definition',
-            type: 'code',
-            description: 'Proper interface definitions',
-            connections: ['1', '2']
-          },
-          {
-            id: '4',
-            label: 'Related Issue #123',
-            type: 'issue',
-            description: 'Similar issue in repository',
-            connections: ['2']
-          }
-        ];
-        setKnowledgeNodes(mockNodes);
-      }
+      setKnowledgeNodes(prev => [...prev, ...newNodes]);
       
     } catch (error) {
-      console.error('Failed to analyze query:', error);
-      
+      console.error('Error processing message:', error);
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         content: "I apologize, but I encountered an error while processing your request. Please try again.",
@@ -266,7 +260,6 @@ export function AgenticChatInterface({ className }: AgenticChatProps) {
         timestamp: new Date(),
         type: 'text'
       };
-      
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
@@ -542,11 +535,27 @@ export function AgenticChatInterface({ className }: AgenticChatProps) {
               )}
             </div>
             
+            {/* Enhanced Code Snippets */}
+            {!isUser && message.metadata?.suggestions && (
+              <div className="mt-4 space-y-3">
+                {message.metadata.suggestions
+                  .filter(suggestion => suggestion.code)
+                  .map((suggestion, index) => (
+                    <CodeSnippetCard
+                      key={index}
+                      suggestion={suggestion}
+                      onCopy={copyToClipboard}
+                    />
+                  ))
+                }
+              </div>
+            )}
+
             {/* Enhanced Action Buttons */}
             {!isUser && message.metadata?.suggestions && (
               <div className="mt-4 pt-4 border-t border-white/10 dark:border-gray-700/50">
                 <div className="flex flex-wrap gap-2">
-                  {relatedIssues.length > 0 && (
+                  {(message.metadata.relatedIssues?.length || 0) > 0 && (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -554,7 +563,18 @@ export function AgenticChatInterface({ className }: AgenticChatProps) {
                       className="text-xs bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 dark:bg-red-900/20 dark:hover:bg-red-900/30 dark:text-red-300 dark:border-red-800"
                     >
                       <Bug className="h-3 w-3 mr-1" />
-                      {relatedIssues.length} Similar Issues
+                      {message.metadata.relatedIssues?.length || 0} Similar Issues
+                    </Button>
+                  )}
+                  {(message.metadata.enhancedIssues?.length || 0) > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openSideDrawer('issues')}
+                      className="text-xs bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 dark:bg-purple-900/20 dark:hover:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800"
+                    >
+                      <Search className="h-3 w-3 mr-1" />
+                      {message.metadata.enhancedIssues?.length || 0} Multi-Repo Issues
                     </Button>
                   )}
                   {knowledgeNodes.length > 0 && (
@@ -568,17 +588,24 @@ export function AgenticChatInterface({ className }: AgenticChatProps) {
                       Knowledge Graph
                     </Button>
                   )}
-                  {message.metadata.suggestions.some(s => s.code) && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 dark:bg-green-900/20 dark:hover:bg-green-900/30 dark:text-green-300 dark:border-green-800"
-                    >
-                      <Code className="h-3 w-3 mr-1" />
-                      View Code
-                    </Button>
-                  )}
                 </div>
+              </div>
+            )}
+
+            {/* Generative Actions */}
+            {!isUser && message.metadata?.showGenerativeActions && (
+              <div className="mt-4 pt-4 border-t border-white/10 dark:border-gray-700/50">
+                <AgenticActionSuggestions
+                  messageContent={message.content}
+                  analysisResult={message.metadata.analysis}
+                  onActionSelect={(action, data) => {
+                    if (action === 'search-issues') {
+                      openSideDrawer('issues');
+                    } else if (action === 'create-issue') {
+                      // GitHub issue creation will be handled by the GitHubIssueCreator component
+                    }
+                  }}
+                />
               </div>
             )}
             
@@ -590,15 +617,40 @@ export function AgenticChatInterface({ className }: AgenticChatProps) {
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Suggested follow-ups:</span>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {message.metadata.followUpQuestions.map((question, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setInputValue(question)}
-                      className="text-sm px-3 py-2 rounded-lg bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 text-amber-800 border border-amber-200 transition-all duration-200 hover:shadow-sm dark:from-amber-900/20 dark:to-orange-900/20 dark:hover:from-amber-900/30 dark:hover:to-orange-900/30 dark:text-amber-300 dark:border-amber-800"
-                    >
-                      {question}
-                    </button>
-                  ))}
+                  {message.metadata.followUpQuestions.map((question, index) => {
+                    const isGitHubIssueAction = question.toLowerCase().includes('create github issue');
+                    return (
+                      <button
+                        key={index}
+                        onClick={() => {
+                          if (isGitHubIssueAction) {
+                            // Open GitHub issue creator with context from the original message
+                            const originalQuery = messages.find(m => m.sender === 'user')?.content || '';
+                            const analysis = message.metadata?.analysis;
+                            if (analysis) {
+                              setShowGitHubIssueCreator(true);
+                              setGitHubIssueContext({
+                                query: originalQuery,
+                                intent: analysis.intent,
+                                keywords: analysis.keywords,
+                                suggestions: analysis.suggestions
+                              });
+                            }
+                          } else {
+                            setInputValue(question);
+                          }
+                        }}
+                        className={`text-sm px-3 py-2 rounded-lg transition-all duration-200 hover:shadow-sm ${
+                          isGitHubIssueAction 
+                            ? 'bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 text-green-800 border border-green-200 dark:from-green-900/20 dark:to-emerald-900/20 dark:hover:from-green-900/30 dark:hover:to-emerald-900/30 dark:text-green-300 dark:border-green-800'
+                            : 'bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 text-amber-800 border border-amber-200 dark:from-amber-900/20 dark:to-orange-900/20 dark:hover:from-amber-900/30 dark:hover:to-orange-900/30 dark:text-amber-300 dark:border-amber-800'
+                        }`}
+                      >
+                        {isGitHubIssueAction && <GitBranch className="h-3 w-3 mr-1 inline" />}
+                        {question}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -654,6 +706,20 @@ export function AgenticChatInterface({ className }: AgenticChatProps) {
 
   const renderSideDrawerContent = () => {
     if (sideDrawerContent === 'issues') {
+      return (
+        <div className="space-y-4">
+          <EnhancedIssueSearch
+            messageContent={messages[messages.length - 1]?.content}
+            onIssueSelect={(result) => {
+              // Handle issue selection - could open in new tab or show details
+              window.open(result.issue.html_url, '_blank');
+            }}
+          />
+        </div>
+      );
+    }
+
+    if (sideDrawerContent === 'knowledge') {
       return (
         <div className="space-y-4">
           <div className="flex items-center gap-2">
@@ -765,66 +831,65 @@ export function AgenticChatInterface({ className }: AgenticChatProps) {
   };
 
   return (
-    <div className={`h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 flex flex-col ${className}`}>
-      {/* Enhanced Header with Glassmorphism */}
-      <div className={`fixed top-0 left-0 right-0 z-50 border-b border-white/20 dark:border-gray-800/50 bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl shadow-lg transition-transform duration-300 ease-in-out ${
-        headerVisible ? 'translate-y-0' : '-translate-y-full'
+    <div className={`flex h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950/90 ${className || ""}`}>
+      {/* Executive Header */}
+      <div className={`fixed top-0 left-0 right-0 z-50 border-b border-slate-200/40 dark:border-slate-800/40 bg-white/98 dark:bg-slate-950/98 backdrop-blur-2xl shadow-[0_1px_3px_0_rgb(0_0_0_/_0.1),_0_1px_2px_-1px_rgb(0_0_0_/_0.1)] transition-all duration-500 ease-out ${
+        headerVisible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'
       }`}>
-        <div className="px-6 py-5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 via-purple-500 to-indigo-600 flex items-center justify-center shadow-lg">
-                  <Sparkles className="h-6 w-6 text-white" />
+        <div className="px-8 py-5">
+          <div className="flex items-center justify-between max-w-6xl mx-auto">
+            <div className="flex items-center gap-5">
+              <div className="relative group">
+                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-700 dark:from-slate-100 dark:to-slate-300 flex items-center justify-center shadow-lg ring-1 ring-slate-900/10 dark:ring-slate-100/10 transition-all duration-300 group-hover:shadow-xl group-hover:scale-105">
+                  <Bot className="h-5 w-5 text-white dark:text-slate-900" />
                 </div>
-                <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white dark:border-gray-900 flex items-center justify-center">
-                  <Zap className="h-2 w-2 text-white" />
+                <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-950 shadow-sm">
+                  <div className="w-full h-full bg-emerald-400 rounded-full animate-pulse"></div>
                 </div>
               </div>
-              <div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                  Agentic Assistant
+              <div className="space-y-0.5">
+                <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">
+                  AI Assistant
                 </h1>
-                <p className="text-sm text-muted-foreground flex items-center gap-2">
-                  <span>Powered by AI</span>
-                  <span className="w-1 h-1 bg-green-500 rounded-full animate-pulse"></span>
-                  <span className="text-green-600 dark:text-green-400 font-medium">Online</span>
+                <p className="text-sm text-slate-600 dark:text-slate-400 flex items-center gap-2 font-medium">
+                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                  <span>Online & Ready</span>
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                <MessageCircle className="h-3 w-3 mr-1" />
-                {messages.length} messages
+            <div className="flex items-center gap-3">
+              <Badge variant="secondary" className="bg-slate-100/80 text-slate-700 dark:bg-slate-800/80 dark:text-slate-300 border border-slate-200/50 dark:border-slate-700/50 font-medium px-3 py-1.5 shadow-sm">
+                <MessageCircle className="h-3.5 w-3.5 mr-2" />
+                {messages.length} {messages.length === 1 ? 'conversation' : 'conversations'}
               </Badge>
               
-              {/* GitHub Sync Status Badge */}
+              {/* GitHub Integration Status */}
               <Badge 
                 variant={gitHubSettings.syncEnabled ? "default" : "secondary"} 
-                className={`${gitHubSettings.syncEnabled 
-                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' 
-                  : 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300'
+                className={`font-medium px-3 py-1.5 shadow-sm transition-all duration-200 ${gitHubSettings.syncEnabled 
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/50 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800/50' 
+                  : 'bg-slate-100/80 text-slate-600 border border-slate-200/50 dark:bg-slate-800/80 dark:text-slate-400 dark:border-slate-700/50'
                 }`}
               >
-                <Github className="h-3 w-3 mr-1" />
-                {gitHubSettings.syncEnabled ? `${syncedIssuesCount} Issues` : 'Offline'}
+                <Github className="h-3.5 w-3.5 mr-2" />
+                {gitHubSettings.syncEnabled ? `${syncedIssuesCount} integrated` : 'Integration offline'}
               </Badge>
               
-              {/* Syncing Indicator */}
+              {/* Synchronization Indicator */}
               {isSyncing && (
-                <Badge variant="outline" className="bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                  <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
-                  Syncing...
+                <Badge variant="outline" className="bg-blue-50/80 text-blue-700 border border-blue-200/60 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800/50 font-medium px-3 py-1.5 shadow-sm">
+                  <RefreshCw className="h-3.5 w-3.5 mr-2 animate-spin" />
+                  Synchronizing
                 </Badge>
               )}
               
-              {/* GitHub Settings Dropdown */}
+              {/* Configuration Panel */}
               <Sheet open={showGitHubSettings} onOpenChange={setShowGitHubSettings}>
                 <SheetTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 relative">
-                    <Settings className="h-4 w-4" />
+                  <Button variant="ghost" size="sm" className="h-10 w-10 p-0 relative hover:bg-slate-100/80 dark:hover:bg-slate-800/80 rounded-xl transition-all duration-200 hover:shadow-sm group">
+                    <Settings className="h-4 w-4 text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-300 transition-colors" />
                     {gitHubSettings.syncEnabled && (
-                      <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full" />
+                      <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full shadow-sm animate-pulse" />
                     )}
                   </Button>
                 </SheetTrigger>
@@ -1061,45 +1126,64 @@ export function AgenticChatInterface({ className }: AgenticChatProps) {
       </div>
 
       {/* Chat Content Area */}
-      <div className={`flex-1 flex flex-col min-h-0 transition-all duration-300 ease-in-out ${
-        headerVisible ? 'pt-[88px]' : 'pt-0'
+      <div className={`flex-1 flex flex-col min-h-0 transition-all duration-500 ease-out ${
+        headerVisible ? 'pt-[80px]' : 'pt-0'
       }`}>
             {/* Messages Area */}
             <div className="flex-1 min-h-0 relative">
               <ScrollArea className="absolute inset-0" ref={chatContainerRef}>
                 <div className="px-8 py-8">
-                  <div className="max-w-5xl mx-auto">
+                  <div className="max-w-4xl mx-auto">
                     {messages.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-300px)] text-center py-8">
-                      <div className="relative mb-6">
-                        <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-blue-500 via-purple-500 to-indigo-600 flex items-center justify-center shadow-2xl">
-                          <MessageCircle className="h-10 w-10 text-white" />
+                      <div className="flex flex-col items-center justify-center text-center min-h-[65vh]">
+                        <div className="relative mb-10 group">
+                          <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 dark:from-slate-100 dark:via-slate-200 dark:to-slate-300 flex items-center justify-center shadow-2xl ring-1 ring-slate-900/10 dark:ring-slate-100/10 transition-all duration-500 group-hover:shadow-3xl group-hover:scale-105">
+                            <Bot className="h-9 w-9 text-white dark:text-slate-900" />
+                          </div>
+                          <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-emerald-500 rounded-full border-3 border-white dark:border-slate-950 shadow-lg flex items-center justify-center">
+                            <Sparkles className="h-3 w-3 text-white animate-pulse" />
+                          </div>
+                          <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-slate-900/5 to-slate-700/5 dark:from-slate-100/5 dark:to-slate-300/5 blur-xl group-hover:blur-2xl transition-all duration-500"></div>
                         </div>
-                        <div className="absolute -top-2 -right-2 w-8 h-8 bg-green-500 rounded-full border-4 border-white dark:border-gray-900 flex items-center justify-center">
-                          <Sparkles className="h-4 w-4 text-white" />
+                        <div className="space-y-4 mb-10">
+                          <h3 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">
+                            AI Assistant
+                          </h3>
+                          <p className="text-lg text-slate-600 dark:text-slate-400 max-w-lg leading-relaxed font-medium">
+                            Your intelligent coding companion for development excellence
+                          </p>
                         </div>
-                      </div>
-                      <h3 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent mb-3">
-                        Welcome to Agentic Assistant
-                      </h3>
-                      <p className="text-muted-foreground max-w-lg leading-relaxed mb-6">
-                        I'm your AI-powered coding companion, ready to help with TypeScript issues, 
-                        debugging challenges, and development best practices. Let's build something amazing together!
-                      </p>
-                      <div className="flex flex-wrap gap-2 justify-center">
-                        <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                          TypeScript Expert
-                        </Badge>
-                        <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
-                          Code Debugging
-                        </Badge>
-                        <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
-                          Best Practices
-                        </Badge>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-2xl mb-8">
+                          <div className="group p-4 rounded-2xl bg-slate-50/50 dark:bg-slate-900/50 border border-slate-200/50 dark:border-slate-800/50 hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-all duration-300 hover:shadow-lg">
+                            <Code className="h-6 w-6 text-blue-600 dark:text-blue-400 mb-2 group-hover:scale-110 transition-transform" />
+                            <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-1">Code Analysis</h4>
+                            <p className="text-sm text-slate-600 dark:text-slate-400">Review, debug, and optimize your code</p>
+                          </div>
+                          <div className="group p-4 rounded-2xl bg-slate-50/50 dark:bg-slate-900/50 border border-slate-200/50 dark:border-slate-800/50 hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-all duration-300 hover:shadow-lg">
+                            <Lightbulb className="h-6 w-6 text-emerald-600 dark:text-emerald-400 mb-2 group-hover:scale-110 transition-transform" />
+                            <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-1">Best Practices</h4>
+                            <p className="text-sm text-slate-600 dark:text-slate-400">Learn industry standards and patterns</p>
+                          </div>
+                          <div className="group p-4 rounded-2xl bg-slate-50/50 dark:bg-slate-900/50 border border-slate-200/50 dark:border-slate-800/50 hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-all duration-300 hover:shadow-lg">
+                            <Bug className="h-6 w-6 text-purple-600 dark:text-purple-400 mb-2 group-hover:scale-110 transition-transform" />
+                            <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-1">Debugging</h4>
+                            <p className="text-sm text-slate-600 dark:text-slate-400">Identify and resolve issues quickly</p>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap gap-3 justify-center">
+                          <Badge variant="secondary" className="bg-blue-50/80 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300 border border-blue-200/50 dark:border-blue-800/50 px-4 py-2 font-medium shadow-sm">
+                            TypeScript
+                          </Badge>
+                          <Badge variant="secondary" className="bg-emerald-50/80 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200/50 dark:border-emerald-800/50 px-4 py-2 font-medium shadow-sm">
+                            React
+                          </Badge>
+                          <Badge variant="secondary" className="bg-purple-50/80 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300 border border-purple-200/50 dark:border-purple-800/50 px-4 py-2 font-medium shadow-sm">
+                            Node.js
+                          </Badge>
                         </div>
                       </div>
                     ) : (
-                      <div className="space-y-8 max-w-4xl mx-auto pb-32">
+                      <div className="space-y-8 pb-32">
                         {messages.map(renderMessage)}
                         <div ref={messagesEndRef} />
                       </div>
@@ -1109,41 +1193,75 @@ export function AgenticChatInterface({ className }: AgenticChatProps) {
               </ScrollArea>
             </div>
 
-            {/* Enhanced Typing Indicator */}
+            {/* Executive Typing Indicator */}
             {isTyping && (
-              <div className="px-6 py-3 border-t border-white/10 dark:border-gray-800/30 bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm">
-                <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                  <div className="flex gap-1">
-                    <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-pulse" />
-                    <div className="w-2.5 h-2.5 bg-purple-500 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }} />
-                    <div className="w-2.5 h-2.5 bg-indigo-500 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }} />
+              <div className="px-8 py-4 border-t border-slate-200/40 dark:border-slate-800/40 bg-white/98 dark:bg-slate-950/98 backdrop-blur-xl">
+                <div className="flex items-center gap-4 text-sm text-slate-600 dark:text-slate-400 max-w-4xl mx-auto">
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-slate-900 to-slate-700 dark:from-slate-100 dark:to-slate-300 flex items-center justify-center shadow-sm">
+                        <Bot className="h-4 w-4 text-white dark:text-slate-900" />
+                      </div>
+                      <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse"></div>
+                    </div>
+                    <div className="flex gap-1.5">
+                      <div className="w-2 h-2 bg-slate-400 dark:bg-slate-500 rounded-full animate-pulse" />
+                      <div className="w-2 h-2 bg-slate-400 dark:bg-slate-500 rounded-full animate-pulse" style={{ animationDelay: '0.3s' }} />
+                      <div className="w-2 h-2 bg-slate-400 dark:bg-slate-500 rounded-full animate-pulse" style={{ animationDelay: '0.6s' }} />
+                    </div>
                   </div>
-                  <span className="font-medium">AI is crafting a response...</span>
+                  <span className="font-medium text-slate-700 dark:text-slate-300">AI is analyzing and crafting response...</span>
                 </div>
               </div>
             )}
 
-            {/* Enhanced Input Area */}
-            <div className="flex-shrink-0 border-t border-white/10 dark:border-gray-800/30 bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl shadow-2xl m-4 mb-6 rounded-xl">
-              <div className="p-6">
-                <div className="max-w-5xl mx-auto">
-                  <div className="relative">
-                    <Textarea
-                      ref={textareaRef}
-                      value={inputValue}
-                      onChange={handleTextareaChange}
-                      onKeyDown={handleKeyPress}
-                      placeholder="Ask me anything about TypeScript, debugging, or best practices..."
-                      className="min-h-[80px] max-h-[240px] resize-none pr-12 bg-white/90 dark:bg-gray-800/90 border-gray-200/50 dark:border-gray-700/50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 rounded-xl shadow-sm text-base"
-                      disabled={isLoading}
-                    />
-                    <Button
-                      onClick={handleSendMessage}
-                      disabled={!inputValue.trim() || isLoading}
-                      className="absolute right-2 bottom-2 h-8 w-8 p-0 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 rounded-lg shadow-lg"
-                    >
-                      <Send className="h-4 w-4" />
-                    </Button>
+            {/* Executive Input Area */}
+            <div className="flex-shrink-0 border-t border-slate-200/40 dark:border-slate-800/40 bg-white/98 dark:bg-slate-950/98 backdrop-blur-2xl">
+              <div className="p-8">
+                <div className="max-w-4xl mx-auto">
+                  <div className="relative group">
+                    <div className="absolute inset-0 bg-gradient-to-r from-slate-200/20 to-slate-300/20 dark:from-slate-700/20 dark:to-slate-600/20 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                    <div className="relative">
+                      <Textarea
+                        ref={textareaRef}
+                        value={inputValue}
+                        onChange={handleTextareaChange}
+                        onKeyDown={handleKeyPress}
+                        placeholder="Ask me anything about development, architecture, or best practices..."
+                        className="min-h-[70px] max-h-[200px] resize-none pr-16 bg-white/90 dark:bg-slate-900/90 border border-slate-200/60 dark:border-slate-700/60 focus:ring-2 focus:ring-slate-900/20 dark:focus:ring-slate-100/20 focus:border-slate-400 dark:focus:border-slate-500 rounded-2xl shadow-lg text-base placeholder:text-slate-500 dark:placeholder:text-slate-400 transition-all duration-300 hover:shadow-xl focus:shadow-xl backdrop-blur-sm"
+                        disabled={isLoading}
+                      />
+                      <Button
+                        onClick={handleSendMessage}
+                        disabled={!inputValue.trim() || isLoading}
+                        className="absolute right-4 bottom-4 h-10 w-10 p-0 bg-gradient-to-br from-slate-900 to-slate-700 dark:from-slate-100 dark:to-slate-300 hover:from-slate-800 hover:to-slate-600 dark:hover:from-slate-200 dark:hover:to-slate-400 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 group"
+                      >
+                        <Send className="h-4 w-4 text-white dark:text-slate-900 group-hover:scale-110 transition-transform" />
+                      </Button>
+                    </div>
+                  </div>
+                  {/* Enhanced Status Bar */}
+                  <div className="flex justify-between items-center mt-4 px-1">
+                    <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
+                      <span className="flex items-center gap-1.5">
+                        <kbd className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono border border-slate-200 dark:border-slate-700">Ctrl</kbd>
+                        <span>+</span>
+                        <kbd className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono border border-slate-200 dark:border-slate-700">Enter</kbd>
+                        <span className="ml-1">to send</span>
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
+                        <span>AI Ready</span>
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                      <span className={`transition-colors ${
+                        inputValue.length > 1800 ? 'text-amber-600 dark:text-amber-400' : 
+                        inputValue.length > 1500 ? 'text-orange-600 dark:text-orange-400' : ''
+                      }`}>
+                        {inputValue.length}/2000
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1169,6 +1287,36 @@ export function AgenticChatInterface({ className }: AgenticChatProps) {
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* GitHub Issue Creator Modal */}
+      <GitHubIssueCreator
+        messageContext={gitHubIssueContext?.query}
+        suggestedTitle={gitHubIssueContext ? `${gitHubIssueContext.intent === 'bug_report' ? 'Bug: ' : 
+                         gitHubIssueContext.intent === 'feature_request' ? 'Feature Request: ' : 
+                         gitHubIssueContext.intent === 'performance' ? 'Performance: ' : 
+                         gitHubIssueContext.intent === 'configuration' ? 'Configuration: ' : 
+                         gitHubIssueContext.intent === 'question' ? 'Question: ' : ''}${gitHubIssueContext.query.slice(0, 80)}` : ''}
+        suggestedBody={gitHubIssueContext ? `## Context\n${gitHubIssueContext.query}\n\n## Keywords\n${gitHubIssueContext.keywords.join(', ')}\n\n## Additional Information\n<!-- Please provide more details about your issue -->` : ''}
+        suggestedLabels={gitHubIssueContext ? (gitHubIssueContext.intent === 'bug_report' ? ['bug'] : 
+                        gitHubIssueContext.intent === 'feature_request' ? ['enhancement'] : 
+                        gitHubIssueContext.intent === 'performance' ? ['performance'] : 
+                        gitHubIssueContext.intent === 'configuration' ? ['question', 'configuration'] : 
+                        ['question']) : []}
+        showTriggerButton={false}
+        isOpen={showGitHubIssueCreator}
+        onOpenChange={(open) => {
+          setShowGitHubIssueCreator(open);
+          if (!open) {
+            setGitHubIssueContext(null);
+          }
+        }}
+        onIssueCreated={(issue) => {
+          console.log('Issue created:', issue);
+          setShowGitHubIssueCreator(false);
+          setGitHubIssueContext(null);
+          // Optionally show a success message or update the UI
+        }}
+      />
     </div>
   );
 }
