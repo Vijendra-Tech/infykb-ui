@@ -47,12 +47,12 @@ const nodeTypes: NodeTypes = {
 
 // Define node types with their colors
 const nodeTypeColors = {
-  'Bug': '#f87171', // red-400
-  'Story': '#60a5fa', // blue-400
-  'HLD': '#34d399', // emerald-400
-  'Task': '#a78bfa', // violet-400
-  'Epic': '#f59e0b', // amber-500
-  'Requirement': '#8b5cf6', // violet-500
+  'Bug': '#dc2626', // red-600 (professional red)
+  'Story': '#1e40af', // blue-700 (professional blue)
+  'HLD': '#059669', // emerald-600 (professional green)
+  'Task': '#7c3aed', // violet-600 (professional purple)
+  'Epic': '#d97706', // amber-600 (professional orange)
+  'Requirement': '#6366f1', // indigo-500 (professional indigo)
 };
 
 // Sample initial data - in a real app, this would come from your API

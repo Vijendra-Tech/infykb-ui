@@ -6,12 +6,14 @@ export interface ChatItem {
   title: string;
   date: string; // ISO string format
   thumbnail?: string;
+  isFavorite?: boolean;
 }
 
 interface ChatHistoryState {
   chats: ChatItem[];
   addChat: (chat: Omit<ChatItem, 'id' | 'date'>) => void;
   deleteChat: (id: string) => void;
+  toggleFavorite: (id: string) => void;
   clearHistory: () => void;
 }
 
@@ -54,6 +56,12 @@ export const useChatHistoryStore = create<ChatHistoryState>()(
       deleteChat: (id) =>
         set((state) => ({
           chats: state.chats.filter((chat) => chat.id !== id),
+        })),
+      toggleFavorite: (id) =>
+        set((state) => ({
+          chats: state.chats.map((chat) => 
+            chat.id === id ? { ...chat, isFavorite: !chat.isFavorite } : chat
+          ),
         })),
       clearHistory: () => set({ chats: [] }),
     }),

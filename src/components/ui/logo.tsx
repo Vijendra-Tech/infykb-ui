@@ -27,23 +27,23 @@ export function Logo({ size = "md", variant = "default", animated = true }: Logo
       case "sidebar":
         return {
           container: "flex items-center gap-3",
-          iconContainer: "p-2 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl shadow-lg shadow-blue-500/25 dark:shadow-blue-400/30",
+          iconContainer: "p-2 bg-slate-700 dark:bg-slate-600 rounded-xl shadow-sm",
           icon: "text-white",
-          text: "font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"
+          text: "font-bold text-slate-800 dark:text-slate-200"
         };
       case "header":
         return {
           container: "flex items-center gap-3",
-          iconContainer: "p-2 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl shadow-lg shadow-blue-500/25 dark:shadow-blue-400/30",
+          iconContainer: "p-2 bg-slate-700 dark:bg-slate-600 rounded-xl shadow-sm",
           icon: "text-white",
-          text: "font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"
+          text: "font-bold text-slate-800 dark:text-slate-200"
         };
       default:
         return {
           container: "flex items-center gap-3",
-          iconContainer: "p-2.5 bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 rounded-2xl shadow-xl shadow-blue-500/30 dark:shadow-blue-400/40 backdrop-blur-sm border border-blue-200/50 dark:border-blue-400/30",
+          iconContainer: "p-2.5 bg-slate-700 dark:bg-slate-600 rounded-2xl shadow-md border border-slate-300 dark:border-slate-500",
           icon: "text-white drop-shadow-sm",
-          text: "font-bold bg-gradient-to-r from-slate-900 via-blue-900 to-purple-900 dark:from-slate-100 dark:via-blue-100 dark:to-purple-100 bg-clip-text text-transparent"
+          text: "font-bold text-slate-800 dark:text-slate-200"
         };
     }
   };

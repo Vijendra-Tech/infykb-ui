@@ -1,4 +1,5 @@
 export interface Agent {
+  [x: string]: any;
   id: string;
   name: string;
   description: string;

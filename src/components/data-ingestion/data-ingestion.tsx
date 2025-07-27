@@ -332,17 +332,17 @@ export function DataIngestion() {
   const getTypeIcon = (type: IngestionSourceType) => {
     switch (type) {
       case "File Upload":
-        return <Upload className="h-4 w-4 text-blue-500" />;
+        return <Upload className="h-4 w-4 text-slate-600 dark:text-slate-400" />;
       case "API Endpoint":
-        return <Globe className="h-4 w-4 text-green-500" />;
+        return <Globe className="h-4 w-4 text-slate-600 dark:text-slate-400" />;
       case "Database":
-        return <Database className="h-4 w-4 text-purple-500" />;
+        return <Database className="h-4 w-4 text-slate-600 dark:text-slate-400" />;
       case "JIRA":
-        return <Globe className="h-4 w-4 text-orange-500" />;
+        return <Globe className="h-4 w-4 text-slate-600 dark:text-slate-400" />;
       case "Confluence":
-        return <FileText className="h-4 w-4 text-cyan-500" />;
+        return <FileText className="h-4 w-4 text-slate-600 dark:text-slate-400" />;
       case "ADO":
-        return <Database className="h-4 w-4 text-indigo-500" />;
+        return <Database className="h-4 w-4 text-slate-600 dark:text-slate-400" />;
       default:
         return null;
     }

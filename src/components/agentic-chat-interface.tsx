@@ -106,8 +106,7 @@ export function AgenticChatInterface({ className }: AgenticChatProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedMessages, setExpandedMessages] = useState<Set<string>>(new Set());
   const [messageReactions, setMessageReactions] = useState<Record<string, 'up' | 'down' | null>>({});
-  const [headerVisible, setHeaderVisible] = useState(true);
-  const [lastScrollY, setLastScrollY] = useState(0);
+  // Removed headerVisible state since header is now always visible
   const [showGitHubSettings, setShowGitHubSettings] = useState(false);
   const [showGitHubIssueCreator, setShowGitHubIssueCreator] = useState(false);
   const [gitHubIssueContext, setGitHubIssueContext] = useState<any>(null);
@@ -145,34 +144,11 @@ export function AgenticChatInterface({ className }: AgenticChatProps) {
     scrollToBottom();
   }, [messages]);
 
-  // Handle scroll-based header visibility
   useEffect(() => {
     const handleScroll = () => {
-      if (!chatContainerRef.current) return;
-      
-      const scrollArea = chatContainerRef.current.querySelector('[data-radix-scroll-area-viewport]');
-      if (!scrollArea) return;
-      
-      const currentScrollY = scrollArea.scrollTop;
-      const scrollThreshold = 10; // Small threshold to detect scroll start
-      
-      // Show header when at very top (within 10px)
-      if (currentScrollY <= scrollThreshold) {
-        setHeaderVisible(true);
-      } else {
-        // Hide header when scrolled down beyond threshold
-        setHeaderVisible(false);
-      }
-      
-      setLastScrollY(currentScrollY);
-    };
-
-    const scrollArea = chatContainerRef.current?.querySelector('[data-radix-scroll-area-viewport]');
-    if (scrollArea) {
-      scrollArea.addEventListener('scroll', handleScroll, { passive: true });
-      return () => scrollArea.removeEventListener('scroll', handleScroll);
-    }
-  }, []);
+    // Scroll handling for other features (auto-scroll to bottom, etc.)
+    // Header visibility logic removed since header is now always visible
+  };  }, []);
 
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInputValue(e.target.value);
@@ -831,65 +807,63 @@ export function AgenticChatInterface({ className }: AgenticChatProps) {
   };
 
   return (
-    <div className={`flex h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950/90 ${className || ""}`}>
-      {/* Executive Header */}
-      <div className={`fixed top-0 left-0 right-0 z-50 border-b border-slate-200/40 dark:border-slate-800/40 bg-white/98 dark:bg-slate-950/98 backdrop-blur-2xl shadow-[0_1px_3px_0_rgb(0_0_0_/_0.1),_0_1px_2px_-1px_rgb(0_0_0_/_0.1)] transition-all duration-500 ease-out ${
-        headerVisible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'
-      }`}>
-        <div className="px-8 py-5">
-          <div className="flex items-center justify-between max-w-6xl mx-auto">
-            <div className="flex items-center gap-5">
+    <div className={`flex flex-col h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950/90 ${className || ""}`}>
+      {/* Chat Header - Constrained Width */}
+      <div className="flex-shrink-0 border-b border-slate-200/40 dark:border-slate-800/40 bg-white/98 dark:bg-slate-950/98 backdrop-blur-2xl shadow-[0_1px_3px_0_rgb(0_0_0_/_0.1),_0_1px_2px_-1px_rgb(0_0_0_/_0.1)]">
+        <div className="px-6 py-4 max-w-5xl mx-auto w-full">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
               <div className="relative group">
-                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-700 dark:from-slate-100 dark:to-slate-300 flex items-center justify-center shadow-lg ring-1 ring-slate-900/10 dark:ring-slate-100/10 transition-all duration-300 group-hover:shadow-xl group-hover:scale-105">
-                  <Bot className="h-5 w-5 text-white dark:text-slate-900" />
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-900 to-slate-700 dark:from-slate-100 dark:to-slate-300 flex items-center justify-center shadow-md ring-1 ring-slate-900/10 dark:ring-slate-100/10 transition-all duration-300 group-hover:shadow-lg group-hover:scale-105">
+                  <Bot className="h-4 w-4 text-white dark:text-slate-900" />
                 </div>
-                <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-950 shadow-sm">
+                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-950 shadow-sm">
                   <div className="w-full h-full bg-emerald-400 rounded-full animate-pulse"></div>
                 </div>
               </div>
               <div className="space-y-0.5">
-                <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">
+                <h1 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-50">
                   AI Assistant
                 </h1>
-                <p className="text-sm text-slate-600 dark:text-slate-400 flex items-center gap-2 font-medium">
+                <p className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-1.5 font-medium">
                   <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
                   <span>Online & Ready</span>
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <Badge variant="secondary" className="bg-slate-100/80 text-slate-700 dark:bg-slate-800/80 dark:text-slate-300 border border-slate-200/50 dark:border-slate-700/50 font-medium px-3 py-1.5 shadow-sm">
-                <MessageCircle className="h-3.5 w-3.5 mr-2" />
-                {messages.length} {messages.length === 1 ? 'conversation' : 'conversations'}
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="bg-slate-100/80 text-slate-700 dark:bg-slate-800/80 dark:text-slate-300 border border-slate-200/50 dark:border-slate-700/50 font-medium px-2.5 py-1 shadow-sm text-xs">
+                <MessageCircle className="h-3 w-3 mr-1.5" />
+                {messages.length}
               </Badge>
               
               {/* GitHub Integration Status */}
               <Badge 
                 variant={gitHubSettings.syncEnabled ? "default" : "secondary"} 
-                className={`font-medium px-3 py-1.5 shadow-sm transition-all duration-200 ${gitHubSettings.syncEnabled 
+                className={`font-medium px-2.5 py-1 shadow-sm transition-all duration-200 text-xs ${gitHubSettings.syncEnabled 
                   ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/50 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800/50' 
                   : 'bg-slate-100/80 text-slate-600 border border-slate-200/50 dark:bg-slate-800/80 dark:text-slate-400 dark:border-slate-700/50'
                 }`}
               >
-                <Github className="h-3.5 w-3.5 mr-2" />
-                {gitHubSettings.syncEnabled ? `${syncedIssuesCount} integrated` : 'Integration offline'}
+                <Github className="h-3 w-3 mr-1.5" />
+                {gitHubSettings.syncEnabled ? `${syncedIssuesCount}` : 'Offline'}
               </Badge>
               
               {/* Synchronization Indicator */}
               {isSyncing && (
-                <Badge variant="outline" className="bg-blue-50/80 text-blue-700 border border-blue-200/60 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800/50 font-medium px-3 py-1.5 shadow-sm">
-                  <RefreshCw className="h-3.5 w-3.5 mr-2 animate-spin" />
-                  Synchronizing
+                <Badge variant="outline" className="bg-blue-50/80 text-blue-700 border border-blue-200/60 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800/50 font-medium px-2.5 py-1 shadow-sm text-xs">
+                  <RefreshCw className="h-3 w-3 mr-1.5 animate-spin" />
+                  Syncing
                 </Badge>
               )}
               
               {/* Configuration Panel */}
               <Sheet open={showGitHubSettings} onOpenChange={setShowGitHubSettings}>
                 <SheetTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-10 w-10 p-0 relative hover:bg-slate-100/80 dark:hover:bg-slate-800/80 rounded-xl transition-all duration-200 hover:shadow-sm group">
-                    <Settings className="h-4 w-4 text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-300 transition-colors" />
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 relative hover:bg-slate-100/80 dark:hover:bg-slate-800/80 rounded-lg transition-all duration-200 hover:shadow-sm group">
+                    <Settings className="h-3.5 w-3.5 text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-300 transition-colors" />
                     {gitHubSettings.syncEnabled && (
-                      <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full shadow-sm animate-pulse" />
+                      <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-emerald-500 rounded-full shadow-sm animate-pulse" />
                     )}
                   </Button>
                 </SheetTrigger>
@@ -1126,9 +1100,7 @@ export function AgenticChatInterface({ className }: AgenticChatProps) {
       </div>
 
       {/* Chat Content Area */}
-      <div className={`flex-1 flex flex-col min-h-0 transition-all duration-500 ease-out ${
-        headerVisible ? 'pt-[80px]' : 'pt-0'
-      }`}>
+      <div className="flex-1 flex flex-col min-h-0">
             {/* Messages Area */}
             <div className="flex-1 min-h-0 relative">
               <ScrollArea className="absolute inset-0" ref={chatContainerRef}>

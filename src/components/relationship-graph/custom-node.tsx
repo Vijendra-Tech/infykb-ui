@@ -20,24 +20,24 @@ interface CustomNodeData {
   version?: string;
 }
 
-// Define node type colors
+// Define node type colors - professional, enterprise-grade palette
 const nodeTypeColors: Record<NodeType, string> = {
-  'Bug': '#f87171', // red-400
-  'Story': '#60a5fa', // blue-400
-  'HLD': '#34d399', // emerald-400
-  'Task': '#a78bfa', // violet-400
-  'Epic': '#f59e0b', // amber-500
-  'Requirement': '#8b5cf6', // violet-500
+  'Bug': '#dc2626', // red-600 (professional red)
+  'Story': '#1e40af', // blue-700 (professional blue)
+  'HLD': '#059669', // emerald-600 (professional green)
+  'Task': '#7c3aed', // violet-600 (professional purple)
+  'Epic': '#d97706', // amber-600 (professional orange)
+  'Requirement': '#6366f1', // indigo-500 (professional indigo)
 };
 
-// Define status colors
+// Define status colors - muted, professional palette
 const statusColors: Record<StatusType, string> = {
-  'Open': '#f97316', // orange-500
-  'In Progress': '#3b82f6', // blue-500
-  'Done': '#22c55e', // green-500
-  'Closed': '#6b7280', // gray-500
-  'Approved': '#8b5cf6', // violet-500
-  'Rejected': '#ef4444', // red-500
+  'Open': '#ea580c', // orange-600 (professional orange)
+  'In Progress': '#2563eb', // blue-600 (professional blue)
+  'Done': '#16a34a', // green-600 (professional green)
+  'Closed': '#64748b', // slate-500 (professional gray)
+  'Approved': '#7c3aed', // violet-600 (professional purple)
+  'Rejected': '#dc2626', // red-600 (professional red)
 };
 
 // Custom node component

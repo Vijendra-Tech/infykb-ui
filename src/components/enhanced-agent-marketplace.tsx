@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { motion } from 'framer-motion';
 import { Search, Star, Users, Zap, Crown, MessageCircle, TrendingUp, Clock, Grid, List, ArrowLeft } from 'lucide-react';
 import { Agent, AgentFilter, AgentStats } from '@/types/agent-types';
 import { AgentMarketplaceService } from '@/services/agent-marketplace-service';
@@ -13,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { AgentChatInterface } from './agent-chat-interface';
+import { AgentSpecificChatInterface } from '@/components/agent-specific-chat-interface';
 import { ElegantAgentCard, ElegantMarketplaceHeader, ElegantSearchBar } from './elegant-agent-enhancements';
 
 interface EnhancedAgentMarketplaceProps {
@@ -160,123 +159,193 @@ export function EnhancedAgentMarketplace({ onAgentSelect, className = '' }: Enha
   }
 
   return (
-    <div className={`page-container bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20 ${className}`}>
-      <div className="flex full-height-minus-header">
-        {/* Left Panel - Agent Marketplace */}
-        <div className={`${selectedAgent ? 'hidden md:block md:w-1/3 lg:w-2/5' : 'w-full'} transition-all duration-300 border-r border-gray-200 bg-white/50 backdrop-blur-sm`}>
-          <div className="h-full flex flex-col">
-            {/* Enhanced Header */}
-            <div className="p-6 border-b border-gray-200/50 bg-gradient-to-r from-white via-slate-50/30 to-white">
-              {!selectedAgent && (
-                <ElegantMarketplaceHeader agentCount={filteredAndSortedAgents.length} />
-              )}
-              
-              {selectedAgent && (
-                <div className="flex items-center gap-3">
+    <div className={`min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30 dark:from-slate-900 dark:to-slate-800 ${className}`}>
+      {/* Professional Header */}
+      <div className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-700/60 shadow-sm">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              {selectedAgent ? (
+                <>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={handleBackToList}
-                    className="hover:bg-gray-100"
+                    className="hover:bg-slate-100 dark:hover:bg-slate-700/50 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
                   >
                     <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back to Agents
+                    Back to Marketplace
                   </Button>
-                  <div className="flex items-center gap-2">
-                    <div className={`text-lg p-1.5 rounded-lg bg-gradient-to-br ${selectedAgent.gradient} text-white shadow-sm`}>
+                  <Separator orientation="vertical" className="h-6" />
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-xl bg-gradient-to-br ${selectedAgent.gradient} text-white shadow-md`}>
                       {selectedAgent.icon}
                     </div>
-                    <span className="font-semibold text-gray-900">{selectedAgent.name}</span>
+                    <div>
+                      <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{selectedAgent.name}</h1>
+                      <p className="text-sm text-slate-600 dark:text-slate-400">{selectedAgent.category}</p>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-center gap-4">
+                  <div className="p-2 rounded-xl bg-gradient-to-br from-blue-600 to-purple-600 text-white shadow-md">
+                    <Zap className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">AI Agent Marketplace</h1>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">Discover and chat with specialized AI assistants</p>
                   </div>
                 </div>
               )}
             </div>
+            
+            {!selectedAgent && stats && (
+              <div className="hidden md:flex items-center gap-6 text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-blue-500 dark:bg-blue-500 rounded-full"></div>
+                  <span className="text-slate-600 dark:text-slate-400">{stats.totalAgents} Agents</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-emerald-500 dark:bg-emerald-500 rounded-full"></div>
+                  <span className="text-slate-600 dark:text-slate-400">{stats.activeChats} Active Chats</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-amber-500 dark:bg-amber-500 rounded-full"></div>
+                  <span className="text-slate-600 dark:text-slate-400">{agents.filter(a => a.isPremium).length} Premium</span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
-            {/* Search and Filters */}
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-6 py-6">
+        <div className="flex gap-6 min-h-[calc(100vh-140px)]">
+          {/* Left Panel - Agent Marketplace */}
+          <div className={`${selectedAgent ? 'hidden lg:block lg:w-96' : 'w-full'} transition-all duration-300`}>
+            <div className="h-full flex flex-col bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200/60 dark:border-slate-700/60 overflow-hidden">
+              {/* Search and Filters */}
             {!selectedAgent && (
-              <div className="p-6 space-y-4 border-b border-gray-200/50 bg-white/30">
-                <ElegantSearchBar
-                  searchQuery={searchQuery}
-                  onSearchChange={setSearchQuery}
-                  placeholder="Search agents by name, description, or tags..."
-                />
-
-                {/* Filters Row */}
-                <div className="flex flex-wrap gap-3">
-                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                    <SelectTrigger className="w-40 bg-white/70 border-gray-200/50">
-                      <SelectValue placeholder="Category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Categories</SelectItem>
-                      {agentCategories.map(category => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
-                    <SelectTrigger className="w-36 bg-white/70 border-gray-200/50">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="popularity">Most Popular</SelectItem>
-                      <SelectItem value="rating">Highest Rated</SelectItem>
-                      <SelectItem value="name">Name A-Z</SelectItem>
-                      <SelectItem value="recent">Recently Updated</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <div className="flex gap-2">
-                    <Button
-                      variant={viewMode === 'grid' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setViewMode('grid')}
-                      className="px-3"
-                    >
-                      <Grid className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant={viewMode === 'list' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setViewMode('list')}
-                      className="px-3"
-                    >
-                      <List className="h-4 w-4" />
-                    </Button>
-                  </div>
-
-                  {(selectedCategory !== 'all' || searchQuery || selectedTags.length > 0 || showPremiumOnly) && (
-                    <Button variant="ghost" size="sm" onClick={clearFilters} className="text-gray-600">
-                      Clear Filters
-                    </Button>
-                  )}
+              <div className="p-6 space-y-6 border-b border-slate-200/60 dark:border-slate-700/60">
+                {/* Search Bar */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500" />
+                  <Input
+                    placeholder="Search agents by name, description, or tags..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 bg-slate-50/50 dark:bg-slate-700/50 border-slate-200/60 dark:border-slate-700/60 focus:bg-white dark:focus:bg-slate-800 focus:border-blue-300 dark:focus:border-blue-500 transition-all"
+                  />
                 </div>
 
-                {/* Popular Tags */}
-                <div className="space-y-2">
-                  <h4 className="text-sm font-medium text-gray-700">Popular Tags</h4>
+                {/* Category Pills */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300">Categories</h4>
                   <div className="flex flex-wrap gap-2">
-                    {popularTags.slice(0, 8).map(tag => (
+                    <Badge
+                      variant={selectedCategory === 'all' ? 'default' : 'secondary'}
+                      className={`cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-950/30 hover:border-blue-200 dark:hover:border-blue-800 transition-colors text-xs ${selectedCategory === 'all' ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800' : 'text-slate-600 dark:text-slate-400'}`}
+                      onClick={() => setSelectedCategory('all')}
+                    >
+                      All
+                    </Badge>
+                    {agentCategories.map(category => (
                       <Badge
-                        key={tag}
-                        variant={selectedTags.includes(tag) ? "default" : "secondary"}
-                        className="cursor-pointer hover:bg-blue-100 transition-colors"
-                        onClick={() => toggleTag(tag)}
+                        key={category.id}
+                        variant={selectedCategory === category.id ? 'default' : 'secondary'}
+                        className={`cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-950/30 hover:border-blue-200 dark:hover:border-blue-800 transition-colors text-xs ${selectedCategory === category.id ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800' : 'text-slate-600 dark:text-slate-400'}`}
+                        onClick={() => setSelectedCategory(category.id)}
                       >
-                        {tag}
+                        {category.name}
                       </Badge>
                     ))}
                   </div>
                 </div>
+
+                {/* Filters and Controls */}
+                <div className="flex flex-wrap gap-3 items-center justify-between">
+                  <div className="flex gap-2">
+                    <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+                      <SelectTrigger className="w-40 bg-slate-50/50 dark:bg-slate-700/50 border-slate-200/60 dark:border-slate-700/60">
+                        <SelectValue placeholder="Sort by" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="popularity">Most Popular</SelectItem>
+                        <SelectItem value="rating">Highest Rated</SelectItem>
+                        <SelectItem value="name">Name A-Z</SelectItem>
+                        <SelectItem value="recent">Recently Updated</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    
+                    <Button
+                      variant={showPremiumOnly ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setShowPremiumOnly(!showPremiumOnly)}
+                      className="px-3"
+                    >
+                      <Crown className="h-3 w-3 mr-1" />
+                      Premium
+                    </Button>
+                  </div>
+
+                  <div className="flex gap-1">
+                    <Button
+                      variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setViewMode('grid')}
+                      className="px-2"
+                    >
+                      <Grid className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant={viewMode === 'list' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setViewMode('list')}
+                      className="px-2"
+                    >
+                      <List className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Popular Tags */}
+                {popularTags.length > 0 && (
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300">Popular Tags</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {popularTags.slice(0, 6).map(tag => (
+                        <Badge
+                          key={tag}
+                          variant={selectedTags.includes(tag) ? "default" : "outline"}
+                          className={`cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-950/30 hover:border-blue-200 dark:hover:border-blue-800 transition-colors text-xs ${selectedTags.includes(tag) ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800' : 'text-slate-600 dark:text-slate-400'}`}
+                          onClick={() => toggleTag(tag)}
+                        >
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Active Filters */}
+                {(selectedCategory !== 'all' || searchQuery || selectedTags.length > 0 || showPremiumOnly) && (
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
+                    <span className="text-sm text-slate-600 dark:text-slate-400">
+                      {filteredAndSortedAgents.length} agent{filteredAndSortedAgents.length !== 1 ? 's' : ''} found
+                    </span>
+                    <Button variant="ghost" size="sm" onClick={clearFilters} className="text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
+                      Clear Filters
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
 
             {/* Agent List */}
             {!selectedAgent && (
-              <div className="flex-1 relative">
+              <div className="flex-1 overflow-hidden">
                 <ScrollArea
                   ref={agentListScrollRef}
                   className="h-full"
@@ -284,13 +353,20 @@ export function EnhancedAgentMarketplace({ onAgentSelect, className = '' }: Enha
                 >
                   <div className="p-6">
                     {filteredAndSortedAgents.length === 0 ? (
-                      <div className="text-center py-12">
-                        <MessageCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">No agents found</h3>
-                        <p className="text-gray-600">Try adjusting your search criteria or filters.</p>
+                      <div className="text-center py-16">
+                        <div className="w-16 h-16 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <MessageCircle className="h-8 w-8 text-slate-400 dark:text-slate-500" />
+                        </div>
+                        <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">No agents found</h3>
+                        <p className="text-slate-600 dark:text-slate-400 max-w-sm mx-auto">Try adjusting your search criteria or browse different categories.</p>
+                        {(selectedCategory !== 'all' || searchQuery || selectedTags.length > 0 || showPremiumOnly) && (
+                          <Button variant="outline" size="sm" onClick={clearFilters} className="mt-4">
+                            Clear all filters
+                          </Button>
+                        )}
                       </div>
                     ) : (
-                      <div className={viewMode === 'grid' ? 'grid grid-cols-1 lg:grid-cols-2 gap-4' : 'space-y-3'}>
+                      <div className={viewMode === 'grid' ? 'grid grid-cols-1 gap-4' : 'space-y-3'}>
                         {filteredAndSortedAgents.map(agent => (
                           <ElegantAgentCard
                             key={agent.id}
@@ -303,35 +379,54 @@ export function EnhancedAgentMarketplace({ onAgentSelect, className = '' }: Enha
                     )}
                   </div>
                 </ScrollArea>
-
-                {/* Scroll Progress Indicator */}
-                <motion.div
-                  className="absolute bottom-4 right-4 w-2 h-16 bg-gray-200/50 rounded-full overflow-hidden backdrop-blur-sm"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: isAgentListScrolling ? 1 : 0.3 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <motion.div
-                    className="w-full bg-gradient-to-t from-blue-500 to-purple-500 rounded-full"
-                    style={{ height: `${agentListScrollProgress}%` }}
-                    transition={{ duration: 0.1 }}
-                  />
-                </motion.div>
               </div>
-            )}
+              )}
+            </div>
           </div>
-        </div>
 
-        {/* Right Panel - Chat Interface */}
-        {selectedAgent && (
-          <div className="flex-1 bg-gradient-to-br from-white via-slate-50/50 to-blue-50/30">
-            <AgentChatInterface
-              agentId={selectedAgent.id}
-              onBack={handleBackToList}
-              className="h-full"
-            />
-          </div>
-        )}
+          {/* Right Panel - Chat Interface */}
+          {selectedAgent && (
+            <div className="flex-1 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200/60 dark:border-slate-700/60 overflow-hidden">
+              <div className="h-full flex flex-col">
+                {/* Chat Header with Agent Info and Back Button */}
+                <div className="flex items-center justify-between p-4 border-b border-slate-200/60 dark:border-slate-700/60 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700">
+                  <div className="flex items-center gap-3">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleBackToList}
+                      className="lg:hidden hover:bg-slate-200 dark:hover:bg-slate-600"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                    <div className="text-2xl">{selectedAgent.icon}</div>
+                    <div>
+                      <h3 className="font-semibold text-slate-900 dark:text-slate-100">{selectedAgent.name}</h3>
+                      <p className="text-sm text-slate-600 dark:text-slate-400">{selectedAgent.category}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {selectedAgent.isPremium && (
+                      <Badge variant="secondary" className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0">
+                        <Crown className="h-3 w-3 mr-1" />
+                        Premium
+                      </Badge>
+                    )}
+                    <div className="flex items-center gap-1 text-sm text-slate-600 dark:text-slate-400">
+                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                      <span>{selectedAgent.rating}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Enhanced Chat Interface */}
+                <div className="flex-1 overflow-hidden">
+                  <AgentSpecificChatInterface agent={selectedAgent} className="h-full" />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

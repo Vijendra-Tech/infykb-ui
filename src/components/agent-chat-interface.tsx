@@ -342,6 +342,24 @@ export function AgentChatInterface({ agentId, sessionId, onBack, className = '',
                         <CardDescription className="text-sm text-slate-600">
                           {agent.description}
                         </CardDescription>
+                        
+                        {/* Agent Capabilities Pills */}
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {agent.capabilities?.slice(0, 3).map((capability, index) => (
+                            <Badge 
+                              key={index}
+                              variant="secondary" 
+                              className="text-xs bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors duration-200"
+                            >
+                              {capability}
+                            </Badge>
+                          ))}
+                          {agent.capabilities && agent.capabilities.length > 3 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{agent.capabilities.length - 3} more
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </>
                   )}
@@ -349,21 +367,24 @@ export function AgentChatInterface({ agentId, sessionId, onBack, className = '',
                 
                 <div className="flex items-center gap-3">
                   {agent && (
-                    <motion.div 
-                      className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200/50 text-sm text-yellow-700"
-                      whileHover={{ scale: 1.05 }}
-                    >
-                      <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                      <span className="font-medium">{agent.rating.toFixed(1)}</span>
-                    </motion.div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-xs font-medium border border-emerald-200">
+                        <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                        <span>Online</span>
+                      </div>
+                      
+                      <div className="flex items-center gap-1 px-3 py-1 bg-amber-50 text-amber-700 rounded-full text-xs font-medium border border-amber-200">
+                        <Star className="h-3 w-3 fill-current" />
+                        <span>{agent.rating}</span>
+                      </div>
+                    </div>
                   )}
                   
                   <Button
+                    onClick={handleToggleFullScreen}
                     variant="ghost"
                     size="sm"
-                    onClick={handleToggleFullScreen}
-                    className="h-9 w-9 p-0 hover:bg-slate-100 rounded-lg transition-all duration-200"
-                    title={effectiveFullScreen ? "Exit Full Screen" : "Enter Full Screen"}
+                    className="h-9 w-9 p-0 hover:bg-slate-100 rounded-lg transition-colors duration-200"
                   >
                     {effectiveFullScreen ? (
                       <Minimize2 className="h-4 w-4" />
@@ -455,6 +476,259 @@ export function AgentChatInterface({ agentId, sessionId, onBack, className = '',
                 scrollBehavior: 'smooth'
               } : {}}
             >
+              {/* Welcome Section - Show when no messages */}
+              {messages.length === 0 && agent && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, ease: "easeOut" }}
+                  className="py-8 px-4 min-h-[600px] flex flex-col justify-center"
+                >
+                  <motion.div
+                    initial={{ scale: 0.8 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                    className={`inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br ${agent.gradient} text-white shadow-xl mb-6`}
+                  >
+                    <span className="text-3xl">{agent.icon}</span>
+                  </motion.div>
+                  
+                  <motion.h2
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.4 }}
+                    className="text-2xl font-bold text-slate-800 mb-3"
+                  >
+                    Welcome to {agent.name}!
+                  </motion.h2>
+                  
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.5 }}
+                    className="text-slate-600 mb-8 max-w-md mx-auto"
+                  >
+                    {agent.description} I'm here to help you with your tasks. Choose a quick action below or start typing your question.
+                  </motion.p>
+                  
+                  {/* Quick Action Buttons */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.6 }}
+                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-8 max-w-2xl mx-auto"
+                  >
+                    {agent.suggestedPrompts?.map((prompt: string, index: number) => (
+                      <motion.button
+                        key={index}
+                        whileHover={{ scale: 1.02, y: -2 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => setInputMessage(prompt)}
+                        className="p-4 text-left bg-white rounded-xl border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all duration-200 group"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center group-hover:bg-blue-100 transition-colors duration-200">
+                            <Sparkles className="h-4 w-4 text-blue-600" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-slate-800 group-hover:text-blue-800 transition-colors duration-200">
+                              {prompt}
+                            </p>
+                          </div>
+                        </div>
+                      </motion.button>
+                    )) || [
+                      <motion.button
+                        key="help"
+                        whileHover={{ scale: 1.02, y: -2 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => setInputMessage('How can you help me?')}
+                        className="p-4 text-left bg-white rounded-xl border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all duration-200 group"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center group-hover:bg-blue-100 transition-colors duration-200">
+                            <Sparkles className="h-4 w-4 text-blue-600" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-slate-800 group-hover:text-blue-800 transition-colors duration-200">
+                              How can you help me?
+                            </p>
+                          </div>
+                        </div>
+                      </motion.button>,
+                      <motion.button
+                        key="capabilities"
+                        whileHover={{ scale: 1.02, y: -2 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => setInputMessage('What are your main capabilities?')}
+                        className="p-4 text-left bg-white rounded-xl border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all duration-200 group"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center group-hover:bg-purple-100 transition-colors duration-200">
+                            <Star className="h-4 w-4 text-purple-600" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-slate-800 group-hover:text-purple-800 transition-colors duration-200">
+                              What are your main capabilities?
+                            </p>
+                          </div>
+                        </div>
+                      </motion.button>,
+                      <motion.button
+                        key="examples"
+                        whileHover={{ scale: 1.02, y: -2 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => setInputMessage('Show me some examples of what you can do')}
+                        className="p-4 text-left bg-white rounded-xl border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all duration-200 group"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center group-hover:bg-green-100 transition-colors duration-200">
+                            <MessageCircle className="h-4 w-4 text-green-600" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-slate-800 group-hover:text-green-800 transition-colors duration-200">
+                              Show me some examples
+                            </p>
+                          </div>
+                        </div>
+                      </motion.button>
+                    ]}
+                  </motion.div>
+                  
+                  {/* Agent Stats */}
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.8 }}
+                    className="flex items-center justify-center gap-6 text-sm text-slate-500 mb-8"
+                  >
+                    <div className="flex items-center gap-1">
+                      <Star className="h-4 w-4 text-amber-500 fill-current" />
+                      <span>{agent.rating} rating</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <MessageCircle className="h-4 w-4 text-blue-500" />
+                      <span>{agent.category}</span>
+                    </div>
+                    {agent.isPremium && (
+                      <div className="flex items-center gap-1">
+                        <Crown className="h-4 w-4 text-amber-500" />
+                        <span>Premium</span>
+                      </div>
+                    )}
+                  </motion.div>
+                  
+                  {/* Agent Capabilities Section */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.9 }}
+                    className="max-w-4xl mx-auto mb-8"
+                  >
+                    <h3 className="text-lg font-semibold text-slate-800 mb-4 text-center">
+                      What I Can Help You With
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {(agent.capabilities || [
+                        'Code Review & Analysis',
+                        'Bug Fixing & Debugging',
+                        'Architecture Planning',
+                        'Performance Optimization',
+                        'Best Practices',
+                        'Documentation'
+                      ]).map((capability, index) => (
+                        <motion.div
+                          key={index}
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ delay: 0.9 + index * 0.1 }}
+                          className="bg-white rounded-lg border border-slate-200 p-4 hover:shadow-md transition-all duration-200 group cursor-pointer"
+                          onClick={() => setInputMessage(`Tell me more about ${capability.toLowerCase()}`)}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center group-hover:from-blue-100 group-hover:to-purple-100 transition-colors duration-200">
+                              <Sparkles className="h-5 w-5 text-blue-600" />
+                            </div>
+                            <div className="flex-1">
+                              <h4 className="font-medium text-slate-800 group-hover:text-blue-800 transition-colors duration-200">
+                                {capability}
+                              </h4>
+                              <p className="text-xs text-slate-500 mt-1">
+                                Click to learn more
+                              </p>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </motion.div>
+                  
+                  {/* Popular Topics Section */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 1.2 }}
+                    className="max-w-3xl mx-auto mb-8"
+                  >
+                    <h3 className="text-lg font-semibold text-slate-800 mb-4 text-center">
+                      Popular Topics
+                    </h3>
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {[
+                        'Getting Started',
+                        'Best Practices',
+                        'Common Issues',
+                        'Advanced Features',
+                        'Integration Help',
+                        'Performance Tips',
+                        'Security Guidelines',
+                        'Troubleshooting'
+                      ].map((topic, index) => (
+                        <motion.button
+                          key={index}
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ delay: 1.2 + index * 0.05 }}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => setInputMessage(`Help me with ${topic.toLowerCase()}`)}
+                          className="px-4 py-2 bg-gradient-to-r from-slate-50 to-slate-100 hover:from-blue-50 hover:to-purple-50 text-slate-700 hover:text-blue-700 rounded-full text-sm font-medium border border-slate-200 hover:border-blue-300 transition-all duration-200"
+                        >
+                          {topic}
+                        </motion.button>
+                      ))}
+                    </div>
+                  </motion.div>
+                  
+                  {/* Tips Section */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 1.5 }}
+                    className="max-w-2xl mx-auto"
+                  >
+                    <div className="bg-gradient-to-r from-blue-50 via-purple-50 to-blue-50 rounded-xl p-6 border border-blue-200/50">
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center flex-shrink-0">
+                          <Sparkles className="h-6 w-6 text-white" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-slate-800 mb-2">
+                            💡 Pro Tips for Better Conversations
+                          </h4>
+                          <ul className="text-sm text-slate-600 space-y-1">
+                            <li>• Be specific about your goals and requirements</li>
+                            <li>• Share relevant context and background information</li>
+                            <li>• Ask follow-up questions to dive deeper</li>
+                            <li>• Use the quick action buttons for common requests</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                </motion.div>
+              )}
+              
               <AnimatePresence>
                 {messages.map((message, index) => (
                   <motion.div
@@ -522,6 +796,57 @@ export function AgentChatInterface({ agentId, sessionId, onBack, className = '',
             </div>
           </ScrollArea>
         </div>
+
+        {/* Quick Actions Toolbar */}
+        {messages.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white/80 backdrop-blur-sm border-t border-slate-200/50 px-6 py-3"
+          >
+            <div className="flex items-center gap-2 max-w-4xl mx-auto">
+              <span className="text-xs text-slate-500 font-medium">Quick Actions:</span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setInputMessage('Can you explain that in more detail?')}
+                  className="h-7 px-3 text-xs bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-full transition-all duration-200"
+                >
+                  <MessageCircle className="h-3 w-3 mr-1" />
+                  Explain More
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setInputMessage('Can you provide an example?')}
+                  className="h-7 px-3 text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-full transition-all duration-200"
+                >
+                  <Sparkles className="h-3 w-3 mr-1" />
+                  Show Example
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setInputMessage('What are the next steps?')}
+                  className="h-7 px-3 text-xs bg-green-50 hover:bg-green-100 text-green-700 rounded-full transition-all duration-200"
+                >
+                  <ArrowLeft className="h-3 w-3 mr-1 rotate-180" />
+                  Next Steps
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setInputMessage('Can you help me with something else?')}
+                  className="h-7 px-3 text-xs bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-full transition-all duration-200"
+                >
+                  <Star className="h-3 w-3 mr-1" />
+                  New Topic
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         {/* Enhanced Input Area */}
         <motion.div
