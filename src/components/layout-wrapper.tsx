@@ -50,7 +50,9 @@ export function LayoutWrapper({ children }: LayoutWrapperProps) {
         {user && <Sidebar />}
         <div className="flex flex-col flex-1 overflow-hidden">
           <Header />
-          {children}
+          <main className="flex-1 overflow-auto pt-4">
+            {children}
+          </main>
         </div>
       </div>
     </SidebarProvider>

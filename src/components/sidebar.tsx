@@ -16,6 +16,8 @@ import {
   UserCheck,
   Users,
   X,
+  Bot,
+  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -42,7 +44,6 @@ const SidebarItem = ({ icon, label, active, badge, href = "#" }: SidebarItemProp
   if (!collapsed) {
     return (
       <motion.div
-        whileHover={{ scale: 1.02, x: 4 }}
         whileTap={{ scale: 0.98 }}
         transition={{ type: "spring", stiffness: 400, damping: 25 }}
       >
@@ -349,6 +350,47 @@ export function Sidebar() {
                   </Link>
                 </motion.div>
 
+                {/* Agent Marketplace */}
+                <motion.div
+                  whileHover={{ scale: 1.02, x: 4 }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                >
+                  <Link
+                    href="/agents"
+                    className={`group flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 ease-out relative overflow-hidden ${
+                      pathname === "/agents" || pathname.startsWith("/agents/")
+                        ? "bg-gradient-to-r from-purple-500/10 via-blue-500/10 to-purple-500/10 dark:from-purple-400/20 dark:via-blue-400/20 dark:to-purple-400/20 text-purple-700 dark:text-purple-300 shadow-lg shadow-purple-500/20 dark:shadow-purple-400/30 border border-purple-200/50 dark:border-purple-400/30 backdrop-blur-sm" 
+                        : "hover:bg-gradient-to-r hover:from-slate-50/80 hover:via-purple-50/30 hover:to-slate-50/80 dark:hover:from-slate-800/60 dark:hover:via-slate-700/40 dark:hover:to-slate-800/60 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 hover:shadow-lg hover:shadow-slate-200/30 dark:hover:shadow-slate-900/40 hover:border hover:border-slate-200/50 dark:hover:border-slate-600/50 hover:backdrop-blur-sm"
+                    }`}
+                  >
+                    {(pathname === "/agents" || pathname.startsWith("/agents/")) && (
+                      <motion.div
+                        className="absolute inset-0 bg-gradient-to-r from-purple-600/5 to-blue-600/5 dark:from-purple-400/10 dark:to-blue-400/10 rounded-2xl"
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.3 }}
+                      />
+                    )}
+                    <div className={`relative z-10 transition-all duration-300 ease-out ${
+                      pathname === "/agents" || pathname.startsWith("/agents/") ? "text-purple-600 dark:text-purple-400 drop-shadow-sm" : "text-slate-500 dark:text-slate-400 group-hover:text-purple-600 dark:group-hover:text-purple-300 group-hover:drop-shadow-sm"
+                    }`}>
+                      <Bot size={18} />
+                    </div>
+                    <span className={`relative z-10 flex-1 font-semibold text-sm transition-all duration-300 ease-out tracking-wide ${
+                      pathname === "/agents" || pathname.startsWith("/agents/") ? "text-purple-700 dark:text-purple-300" : "text-slate-700 dark:text-slate-200 group-hover:text-slate-900 dark:group-hover:text-slate-100"
+                    }`}>Agents</span>
+                    <motion.div
+                      className="relative z-10 text-xs px-3 py-1.5 rounded-full font-semibold bg-gradient-to-r from-purple-100 to-blue-100 dark:from-purple-900/60 dark:to-blue-900/60 text-purple-700 dark:text-purple-300 shadow-sm border border-purple-200/50 dark:border-purple-400/30"
+                      whileHover={{ scale: 1.1 }}
+                      transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                    >
+                      <Sparkles size={10} className="inline mr-1" />
+                      AI
+                    </motion.div>
+                  </Link>
+                </motion.div>
+
                 {/* Chat History */}
                 <motion.div
                   whileHover={{ scale: 1.02, x: 4 }}
@@ -509,6 +551,28 @@ export function Sidebar() {
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="right">Chats</TooltipContent>
+              </Tooltip>
+
+              {/* Agent Marketplace in collapsed mode */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link
+                    href="/agents"
+                    className={`p-3 rounded-xl transition-all duration-300 ease-out ${
+                      pathname === "/agents" || pathname.startsWith("/agents/")
+                        ? "bg-gradient-to-r from-purple-100/80 via-blue-50/60 to-purple-50/80 dark:from-purple-900/40 dark:via-blue-900/30 dark:to-purple-800/40 shadow-lg shadow-purple-200/30 dark:shadow-purple-900/20 border border-purple-200/50 dark:border-purple-700/50"
+                        : "hover:bg-gradient-to-r hover:from-slate-50/80 hover:via-purple-50/30 hover:to-slate-50/80 dark:hover:from-slate-800/60 dark:hover:via-slate-700/40 dark:hover:to-slate-800/60 hover:shadow-md"
+                    }`}
+                  >
+                    <Bot size={18} className={pathname === "/agents" || pathname.startsWith("/agents/") ? "text-purple-600 dark:text-purple-400" : "text-muted-foreground dark:text-slate-300"} />
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  <div className="flex items-center gap-2">
+                    <Sparkles size={12} className="text-purple-500" />
+                    <span>Agent Marketplace</span>
+                  </div>
+                </TooltipContent>
               </Tooltip>
 
               {/* Organization icons in collapsed mode */}

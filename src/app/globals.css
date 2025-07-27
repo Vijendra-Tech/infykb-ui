@@ -1,6 +1,28 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Layout utilities to prevent content from being hidden behind header */
+.page-container {
+  @apply min-h-screen;
+}
+
+.page-content {
+  @apply pt-4 px-4 sm:px-6 lg:px-8;
+}
+
+.page-content-full {
+  @apply pt-6;
+}
+
+/* Ensure proper spacing for full-height components */
+.full-height-minus-header {
+  min-height: calc(100vh - 3.5rem);
+}
+
+.full-height-minus-header-padded {
+  min-height: calc(100vh - 5.5rem);
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {

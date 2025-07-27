@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Search, Edit, Sparkles, RefreshCcw, History, Menu, X, Home, BotIcon, Database, Clock, BarChart, FileText, Settings, LogOut, LogIn, Users, Building, UserCheck } from "lucide-react";
+import { Search, Edit, Sparkles, RefreshCcw, History, Menu, X, Home, BotIcon, Database, Clock, BarChart, FileText, Settings, LogOut, LogIn, Users, Building, UserCheck, Bot } from "lucide-react";
 import { ModeToggle } from "@/components/mode-toggle";
 import { AnimationToggle, SimpleAnimationToggle } from "@/components/animation-toggle";
 import { UserProfileDropdown } from "@/components/user-profile-dropdown";
@@ -100,6 +100,17 @@ export function Header() {
           {isAuthenticated() ? (
             <>
 
+              
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="rounded-full"
+                onClick={() => router.push('/agents')}
+                title="Agent Marketplace"
+              >
+                <Bot className="h-5 w-5" />
+                <span className="sr-only">Agent Marketplace</span>
+              </Button>
               
               <Button 
                 variant="ghost" 
@@ -260,6 +271,20 @@ export function Header() {
                       
 
                       
+                      <MobileMenuItem 
+                        icon={<Home size={18} />} 
+                        label="Dashboard" 
+                        href="/dashboard"
+                        active={pathname === "/dashboard"}
+                      />
+                      
+                      <MobileMenuItem 
+                        icon={<Bot size={18} />} 
+                        label="Agent Marketplace" 
+                        href="/agents"
+                        active={pathname === "/agents" || pathname.startsWith("/agents/")}
+                      />
+                      
                       <div className="h-px bg-border my-1" />
                       
                       <MobileMenuItem 
@@ -315,10 +340,17 @@ export function Header() {
                     /* Not Authenticated - Show Login Option */
                     <>
                       <MobileMenuItem 
-                        icon={<LogIn size={18} />} 
-                        label="Login" 
-                        href="/auth/login"
-                        active={pathname === "/auth/login"}
+                        icon={<Home size={18} />} 
+                        label="Dashboard" 
+                        href="/dashboard"
+                        active={pathname === "/dashboard"}
+                      />
+                      
+                      <MobileMenuItem 
+                        icon={<Bot size={18} />} 
+                        label="Agent Marketplace" 
+                        href="/agents"
+                        active={pathname === "/agents" || pathname.startsWith("/agents/")}
                       />
                       
                       <div className="h-px bg-border my-1" />

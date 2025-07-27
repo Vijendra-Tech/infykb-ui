@@ -45,7 +45,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AnimationProvider>
-            <div className={cn("min-h-screen bg-background font-sans antialiased", geistSans.variable)}>
+            <div className={cn("min-h-screen bg-background font-sans antialiased no-hover-animations", geistSans.variable)}>
               <LayoutWrapper>
                 {children}
               </LayoutWrapper>
