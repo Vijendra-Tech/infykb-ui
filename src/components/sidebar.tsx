@@ -232,13 +232,6 @@ export function Sidebar() {
               href="/chat"
             />
             <SidebarItem
-              icon={<Sparkles className="h-5 w-5" />}
-              label="Agents"
-              active={pathname === "/agents"}
-              href="/agents"
-              badge="New"
-            />
-            <SidebarItem
               icon={<Clock className="h-5 w-5" />}
               label="Chat History"
               active={pathname === "/chat-history"}
@@ -303,13 +296,6 @@ export function Sidebar() {
               label="Chat"
               active={pathname === "/chat"}
               href="/chat"
-            />
-            <SidebarItem
-              icon={<Sparkles className="h-5 w-5" />}
-              label="Agents"
-              active={pathname === "/agents"}
-              href="/agents"
-              badge="New"
             />
             <SidebarItem
               icon={<Clock className="h-5 w-5" />}

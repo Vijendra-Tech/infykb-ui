@@ -626,7 +626,7 @@ export default function DashboardPage() {
                 <Button 
                   variant="outline" 
                   className="h-20 flex flex-col items-center gap-2"
-                  onClick={() => router.push('/settings')}
+                  onClick={() => router.push('/projects/new')}
                 >
                   <Key className="h-6 w-6" />
                   <span className="text-sm">Settings</span>

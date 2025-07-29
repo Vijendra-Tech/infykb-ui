@@ -103,10 +103,10 @@ export function UserProfileDropdown({
               </svg>
             </div>
           </div>
-          <Link href="/settings">
+          <Link href="/projects/new">
             <DropdownMenuItem className="flex items-center gap-2 cursor-pointer">
               <Settings className="h-4 w-4" />
-              <span>Settings</span>
+              <span>New Project</span>
             </DropdownMenuItem>
           </Link>
           <DropdownMenuItem className="flex items-center gap-2 cursor-pointer">

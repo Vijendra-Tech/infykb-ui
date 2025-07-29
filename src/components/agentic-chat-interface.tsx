@@ -808,29 +808,10 @@ export function AgenticChatInterface({ className }: AgenticChatProps) {
 
   return (
     <div className={`flex flex-col h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950/90 ${className || ""}`}>
-      {/* Chat Header - Constrained Width */}
+      {/* Chat Header - Minimal */}
       <div className="flex-shrink-0 border-b border-slate-200/40 dark:border-slate-800/40 bg-white/98 dark:bg-slate-950/98 backdrop-blur-2xl shadow-[0_1px_3px_0_rgb(0_0_0_/_0.1),_0_1px_2px_-1px_rgb(0_0_0_/_0.1)]">
         <div className="px-6 py-4 max-w-5xl mx-auto w-full">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="relative group">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-900 to-slate-700 dark:from-slate-100 dark:to-slate-300 flex items-center justify-center shadow-md ring-1 ring-slate-900/10 dark:ring-slate-100/10 transition-all duration-300 group-hover:shadow-lg group-hover:scale-105">
-                  <Bot className="h-4 w-4 text-white dark:text-slate-900" />
-                </div>
-                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-950 shadow-sm">
-                  <div className="w-full h-full bg-emerald-400 rounded-full animate-pulse"></div>
-                </div>
-              </div>
-              <div className="space-y-0.5">
-                <h1 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-50">
-                  AI Assistant
-                </h1>
-                <p className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-1.5 font-medium">
-                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-                  <span>Online & Ready</span>
-                </p>
-              </div>
-            </div>
+          <div className="flex items-center justify-end">
             <div className="flex items-center gap-2">
               <Badge variant="secondary" className="bg-slate-100/80 text-slate-700 dark:bg-slate-800/80 dark:text-slate-300 border border-slate-200/50 dark:border-slate-700/50 font-medium px-2.5 py-1 shadow-sm text-xs">
                 <MessageCircle className="h-3 w-3 mr-1.5" />

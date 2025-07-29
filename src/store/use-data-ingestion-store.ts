@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type IngestionSourceType = 'File Upload' | 'API Endpoint' | 'Database' | 'JIRA' | 'Confluence' | 'ADO';
+export type IngestionSourceType = 'File Upload' | 'API Endpoint' | 'Database' | 'JIRA' | 'Confluence' | 'ADO' | 'GitHub';
 
 export type IngestionStatus = 'Ready' | 'Processing' | 'Completed' | 'Failed';
 

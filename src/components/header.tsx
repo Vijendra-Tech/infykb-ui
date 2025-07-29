@@ -167,9 +167,9 @@ export function Header() {
                       <Home className="h-4 w-4 inline mr-2" />
                       Dashboard
                     </Link>
-                    <Link href="/settings" className="block px-3 py-2 text-sm hover:bg-muted">
+                    <Link href="/projects/new" className="block px-3 py-2 text-sm hover:bg-muted">
                       <Settings className="h-4 w-4 inline mr-2" />
-                      Settings
+                      New Project
                     </Link>
                     <button
                       onClick={() => {
