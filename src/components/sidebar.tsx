@@ -4,24 +4,23 @@ import { useSidebar } from "@/context/sidebar-context";
 import { useDexieAuthStore } from "@/store/use-dexie-auth-store";
 import { useChatHistoryStore } from "@/store/use-chat-history-store";
 import {
-  BarChart,
-  Clock,
-  Database,
-  FileText,
   Home,
-  Menu,
-  Pencil,
-  Share2,
-  UserCheck,
+  Database,
   Users,
+  FileText,
+  Menu,
   X,
+  Clock,
   Bot,
-  Sparkles,
-} from "lucide-react";
+  BarChart,
+  UserCheck,
+  Search
+} from 'lucide-react';
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { Logo } from "@/components/ui/logo";
+
 
 import {
   Tooltip,
@@ -213,18 +212,13 @@ export function Sidebar() {
       <div className="flex-1 overflow-auto py-6 px-4 bg-white dark:bg-slate-950 relative">
         <div className="absolute inset-0 bg-slate-50/20 dark:bg-slate-900/20" />
         {!collapsed && (
-          <div className="space-y-2 mb-6">
+          <SidebarSection title="Main">
             <SidebarItem
               icon={<Home className="h-5 w-5" />}
               label="Home"
               active={pathname === "/"}
               href="/"
             />
-          </div>
-        )}
-
-        {!collapsed && (
-          <SidebarSection title="Main">
             <SidebarItem
               icon={<Bot className="h-5 w-5" />}
               label="Chat"
@@ -237,6 +231,18 @@ export function Sidebar() {
               active={pathname === "/chat-history"}
               href="/chat-history"
               badge={chats.length.toString()}
+            />
+          </SidebarSection>
+        )}
+
+        {/* Issue Search Navigation */}
+        {!collapsed && (
+          <SidebarSection title="Search">
+            <SidebarItem
+              icon={<Search className="h-5 w-5" />}
+              label="Issue Search"
+              active={pathname === "/issues"}
+              href="/issues"
             />
           </SidebarSection>
         )}
@@ -296,6 +302,12 @@ export function Sidebar() {
               label="Chat"
               active={pathname === "/chat"}
               href="/chat"
+            />
+            <SidebarItem
+              icon={<Search className="h-5 w-5" />}
+              label="Issue Search"
+              active={pathname === "/issues"}
+              href="/issues"
             />
             <SidebarItem
               icon={<Clock className="h-5 w-5" />}

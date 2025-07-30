@@ -186,9 +186,14 @@ export const useOrganizationStore = create<OrganizationStore>()(
 
       fetchMembers: async () => {
         set({ isLoading: true });
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 500));
-        set({ members: mockMembers, isLoading: false });
+        try {
+          // Simulate API call
+          await new Promise(resolve => setTimeout(resolve, 500));
+          set({ members: mockMembers, isLoading: false });
+        } catch (error) {
+          console.error(error);
+          set({ isLoading: false });
+        }
       },
 
       fetchProjects: async () => {

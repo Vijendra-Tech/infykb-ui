@@ -57,13 +57,14 @@ export interface AgentChatSession {
   createdAt: string;
   updatedAt: string;
   isActive: boolean;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface AgentMessage {
   id: string;
   role: 'user' | 'agent' | 'system';
-  content: string;
+  content?: string;
+  context?: Record<string, unknown>;
   timestamp: string;
   metadata?: {
     agentName?: string;
@@ -78,7 +79,7 @@ export interface AgentAction {
   type: 'link' | 'button' | 'form' | 'download';
   label: string;
   action: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
 }
 
 export interface AgentAttachment {

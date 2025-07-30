@@ -192,7 +192,116 @@ export interface GitHubIssue {
   syncedAt: Date;
   organizationId: string;
   projectId?: string;
+  sourceId?: string;
   metadata?: Record<string, unknown>;
+}
+
+export interface GitHubPullRequest {
+  id?: number;
+  uuid: string;
+  githubId: number;
+  number: number;
+  title: string;
+  body?: string;
+  state: 'open' | 'closed' | 'merged';
+  html_url: string;
+  repository: string;
+  user: {
+    login: string;
+    avatar_url: string;
+  };
+  head: {
+    ref: string;
+    sha: string;
+  };
+  base: {
+    ref: string;
+    sha: string;
+  };
+  created_at: string;
+  updated_at: string;
+  merged_at?: string;
+  syncedAt: Date;
+  organizationId: string;
+  projectId?: string;
+  sourceId?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface GitHubDiscussion {
+  id?: number;
+  uuid: string;
+  githubId: string;
+  number: number;
+  title: string;
+  body: string;
+  state: 'open' | 'closed';
+  url: string;
+  repository: string;
+  author: {
+    login: string;
+    avatarUrl: string;
+  };
+  category: {
+    name: string;
+    description: string;
+  };
+  created_at: string;
+  updated_at: string;
+  syncedAt: Date;
+  organizationId: string;
+  projectId?: string;
+  sourceId?: string;
+  metadata?: Record<string, unknown>;
+}
+
+// Chat History Models
+export interface ChatSession {
+  id?: number;
+  uuid: string;
+  title: string;
+  userId: string;
+  organizationId: string;
+  projectId?: string;
+  status: 'active' | 'archived' | 'deleted';
+  messageCount: number;
+  lastMessageAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
+  metadata?: {
+    tags?: string[];
+    isFavorite?: boolean;
+    summary?: string;
+    aiModel?: string;
+    totalTokens?: number;
+  };
+}
+
+export interface ChatMessage {
+  id?: number;
+  uuid: string;
+  sessionId: string;
+  content: string;
+  sender: 'user' | 'assistant';
+  type: 'text' | 'code' | 'analysis' | 'error';
+  timestamp: Date;
+  metadata?: {
+    analysis?: any;
+    suggestions?: any[];
+    relatedIssues?: any[];
+    confidence?: number;
+    followUpQuestions?: string[];
+    tokenCount?: number;
+    processingTime?: number;
+  };
+  isEdited?: boolean;
+  editedAt?: Date;
+  parentMessageId?: string;
+  reactions?: {
+    thumbsUp?: number;
+    thumbsDown?: number;
+    userReaction?: 'up' | 'down' | null;
+  };
 }
 
 // Database Class
@@ -207,11 +316,15 @@ export class AppDatabase extends Dexie {
   auditLogs!: Table<AuditLog>;
   apiKeys!: Table<ApiKey>;
   githubIssues!: Table<GitHubIssue>;
+  githubPullRequests!: Table<GitHubPullRequest>;
+  githubDiscussions!: Table<GitHubDiscussion>;
+  chatSessions!: Table<ChatSession>;
+  chatMessages!: Table<ChatMessage>;
 
   constructor() {
     super('InfinityKBDatabase');
     
-    this.version(2).stores({
+    this.version(4).stores({
       users: '++id, uuid, email, organizationId, role, isActive, createdAt',
       organizations: '++id, uuid, name, domain, ownerId, isActive, createdAt',
       projects: '++id, uuid, name, organizationId, createdBy, status, createdAt',
@@ -221,7 +334,11 @@ export class AppDatabase extends Dexie {
       userPermissions: '++id, uuid, userId, organizationId, projectId, permission, isActive',
       auditLogs: '++id, uuid, userId, organizationId, action, timestamp',
       apiKeys: '++id, uuid, userId, organizationId, projectId, isActive, createdAt',
-      githubIssues: '++id, uuid, githubId, number, repository, state, organizationId, syncedAt'
+      githubIssues: '++id, uuid, githubId, number, repository, state, organizationId, sourceId, syncedAt',
+      githubPullRequests: '++id, uuid, githubId, number, repository, state, organizationId, sourceId, syncedAt',
+      githubDiscussions: '++id, uuid, githubId, number, repository, state, organizationId, sourceId, syncedAt',
+      chatSessions: '++id, uuid, userId, organizationId, projectId, status, lastMessageAt, createdAt',
+      chatMessages: '++id, uuid, sessionId, sender, type, timestamp'
     });
 
     // Hooks for automatic timestamps and UUIDs
@@ -283,6 +400,23 @@ export class AppDatabase extends Dexie {
         } else if (tableName === 'githubIssues') {
           obj.uuid = obj.uuid || generateUUID();
           obj.syncedAt = obj.syncedAt || new Date();
+        } else if (tableName === 'githubPullRequests') {
+          obj.uuid = obj.uuid || generateUUID();
+          obj.syncedAt = obj.syncedAt || new Date();
+        } else if (tableName === 'githubDiscussions') {
+          obj.uuid = obj.uuid || generateUUID();
+          obj.syncedAt = obj.syncedAt || new Date();
+        } else if (tableName === 'chatSessions') {
+          obj.uuid = obj.uuid || generateUUID();
+          obj.createdAt = obj.createdAt || new Date();
+          obj.updatedAt = new Date();
+          obj.lastMessageAt = obj.lastMessageAt || new Date();
+          obj.status = obj.status || 'active';
+          obj.messageCount = obj.messageCount || 0;
+        } else if (tableName === 'chatMessages') {
+          obj.uuid = obj.uuid || generateUUID();
+          obj.timestamp = obj.timestamp || new Date();
+          obj.type = obj.type || 'text';
         }
       });
     });

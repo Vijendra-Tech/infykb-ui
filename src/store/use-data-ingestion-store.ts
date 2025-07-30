@@ -46,14 +46,6 @@ export interface IngestionSource {
   };
 }
 
-type NewSourceInput = {
-  name: string;
-  type: IngestionSourceType;
-  url?: string;
-  username?: string;
-  password?: string;
-};
-
 interface DataIngestionState {
   sources: IngestionSource[];
   addSource: (source: Omit<IngestionSource, 'id' | 'status' | 'createdAt' | 'updatedAt' | 'ingestStats' | 'errorDetails' | 'ingestHistory' | 'lastResubmission'>) => string;

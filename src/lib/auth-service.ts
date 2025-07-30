@@ -515,7 +515,7 @@ export class AuthService {
   }
 
   // Check if user has permission
-  async hasPermission(permission: string, resource?: string, projectId?: string): Promise<boolean> {
+  async hasPermission(permission: string, _resource?: string, _projectId?: string): Promise<boolean> {
     const user = await this.getCurrentUser();
     if (!user) return false;
 
@@ -532,8 +532,8 @@ export class AuthService {
 
     const hasExplicitPermission = userPermissions.some(perm => {
       const matchesPermission = perm.permission === permission || perm.permission === '*';
-      const matchesResource = !resource || perm.resource === resource || perm.resource === '*';
-      const matchesProject = !projectId || perm.projectId === projectId;
+      const matchesResource = !_resource || perm.resource === _resource || perm.resource === '*';
+      const matchesProject = !_projectId || perm.projectId === _projectId;
       
       return matchesPermission && matchesResource && matchesProject;
     });
@@ -541,7 +541,7 @@ export class AuthService {
     if (hasExplicitPermission) return true;
 
     // Check role-based permissions
-    return this.checkRolePermission(user.role, permission, resource, projectId);
+    return this.checkRolePermission(user.role, permission, _resource, _projectId);
   }
 
   // Check role-based permissions

@@ -2,14 +2,17 @@
 
 import { useState, useCallback } from "react";
 import { IngestionTrackingDrawer } from "./ingestion-tracking-drawer";
+import { GitHubSourceDrawer } from "./github-source-drawer";
 import { useDataIngestionStore, type IngestionSourceType, type IngestionSource } from "@/store/use-data-ingestion-store";
+import { githubService } from "@/services/github-service";
+import { githubDataService } from "@/services/github-data-service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Upload, Database, Globe, RefreshCw, Play, X, Plus, FileText, Link, Pencil, UploadCloud, CheckCircle } from "lucide-react";
+import { Upload, Database, Globe, RefreshCw, Play, X, Plus, FileText, Link, Pencil, UploadCloud, CheckCircle, Github } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import {
   Pagination,
@@ -46,6 +49,7 @@ export function DataIngestion() {
   const [urlError, setUrlError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isGitHubDrawerOpen, setIsGitHubDrawerOpen] = useState(false);
 
   const resetForm = () => {
     setNewSourceName("");
@@ -280,38 +284,143 @@ export function DataIngestion() {
   const [processingSourceId, setProcessingSourceId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const handleStartIngestion = (id: string) => {
+  const handleStartIngestion = async (id: string) => {
     setProcessingSourceId(id);
     setError(null);
     startIngestion(id);
     
-    // Simulate ingestion completion after 3 seconds
-    setTimeout(() => {
-      try {
-        // Randomly succeed or fail (80% success rate)
-        const isSuccess = Math.random() > 0.2;
+    try {
+      const source = sources.find(s => s.id === id);
+      if (!source) {
+        throw new Error('Source not found');
+      }
+
+      if (source.type === 'GitHub') {
+        // Handle GitHub ingestion
+        await handleGitHubIngestion(id, source);
+      } else {
+        // Handle other source types with simulation
+        await handleGenericIngestion(id);
+      }
+    } catch (err) {
+      console.error('Ingestion error:', err);
+      setError("An error occurred during ingestion. Please try again.");
+      failIngestion(id, err instanceof Error ? err.message : "Unexpected error during processing", "SYSTEM_ERROR");
+      setProcessingSourceId(null);
+    }
+  };
+
+  const handleGitHubIngestion = async (id: string, source: IngestionSource) => {
+    try {
+      if (!source.url) {
+        throw new Error('GitHub repository URL is required');
+      }
+
+      // Extract GitHub settings from source
+      const githubSettings = {
+        repository: source.url,
+        accessToken: source.password, // Access token stored in password field
+        syncIssues: true, // Default to true, could be stored in source metadata
+        syncPRs: true,
+        syncDiscussions: false
+      };
+
+      console.log('Starting GitHub ingestion for:', githubSettings.repository);
+      
+      // Fetch GitHub data
+      const result = await githubService.ingestGitHubData(githubSettings);
+      
+      console.log('GitHub ingestion result:', result);
+      
+      if (result.errors.length > 0) {
+        console.warn('GitHub ingestion completed with errors:', result.errors);
+      }
+      
+      const totalRecords = result.totalCount;
+      const processedDocs = result.issues.length + result.pullRequests.length + result.discussions.length;
+      
+      console.log(`GitHub ingestion completed: ${totalRecords} total records, ${processedDocs} processed, ${result.errors.length} errors`);
+      console.log('Fetched data:', {
+        issues: result.issues.length,
+        pullRequests: result.pullRequests.length,
+        discussions: result.discussions.length
+      });
+      
+      if (totalRecords > 0) {
+        // Store the fetched GitHub data in Dexie database
+        console.log('Storing GitHub data in database...');
+        const storageResult = await githubDataService.storeGitHubData(result, {
+          sourceId: id,
+          organizationId: 'default-org', // TODO: Get from user context
+          projectId: undefined, // TODO: Get from user context if available
+          repository: githubSettings.repository
+        });
         
-        if (isSuccess) {
-          const recordCount = Math.floor(Math.random() * 1000) + 100;
-          const processedDocs = recordCount - Math.floor(Math.random() * 10); // Some may fail
-          const failedDocs = recordCount - processedDocs;
-          
-          completeIngestion(id, recordCount, {
-            totalDocuments: recordCount,
-            processedDocuments: processedDocs,
-            failedDocuments: failedDocs
-          });
-        } else {
-          failIngestion(id, "Failed to process some documents due to formatting issues", "FORMAT_ERROR");
+        console.log('GitHub data storage result:', storageResult);
+        
+        // Check if storage had any errors
+        if (storageResult.errors.length > 0) {
+          console.warn('Some data storage errors occurred:', storageResult.errors);
+          // Still complete ingestion but log warnings
         }
         
-        setProcessingSourceId(null);
-      } catch (err) {
-        setError("An error occurred during ingestion. Please try again.");
-        failIngestion(id, "Unexpected error during processing", "SYSTEM_ERROR");
-        setProcessingSourceId(null);
+        const storedRecords = storageResult.storedIssues + storageResult.storedPullRequests + storageResult.storedDiscussions;
+        console.log(`Successfully stored ${storedRecords} GitHub records in database`);
+        
+        completeIngestion(id, totalRecords, {
+          totalDocuments: totalRecords,
+          processedDocuments: storedRecords,
+          failedDocuments: totalRecords - storedRecords
+        });
+      } else if (result.errors.length > 0) {
+        failIngestion(id, result.errors.join('; '), "GITHUB_API_ERROR");
+      } else {
+        completeIngestion(id, 0, {
+          totalDocuments: 0,
+          processedDocuments: 0,
+          failedDocuments: 0
+        });
       }
-    }, 3000);
+      
+      setProcessingSourceId(null);
+    } catch (error) {
+      console.error('GitHub ingestion failed:', error);
+      failIngestion(id, error instanceof Error ? error.message : "GitHub ingestion failed", "GITHUB_ERROR");
+      setProcessingSourceId(null);
+    }
+  };
+
+  const handleGenericIngestion = async (id: string) => {
+    // Simulate ingestion for non-GitHub sources
+    return new Promise<void>((resolve) => {
+      setTimeout(() => {
+        try {
+          // Randomly succeed or fail (80% success rate)
+          const isSuccess = Math.random() > 0.2;
+          
+          if (isSuccess) {
+            const recordCount = Math.floor(Math.random() * 1000) + 100;
+            const processedDocs = recordCount - Math.floor(Math.random() * 10);
+            const failedDocs = recordCount - processedDocs;
+            
+            completeIngestion(id, recordCount, {
+              totalDocuments: recordCount,
+              processedDocuments: processedDocs,
+              failedDocuments: failedDocs
+            });
+          } else {
+            failIngestion(id, "Failed to process some documents due to formatting issues", "FORMAT_ERROR");
+          }
+          
+          setProcessingSourceId(null);
+          resolve();
+        } catch (err) {
+          failIngestion(id, "Unexpected error during processing", "SYSTEM_ERROR");
+          setProcessingSourceId(null);
+          resolve();
+        }
+      }, 3000);
+    });
   };
 
   const getStatusBadge = (status: string) => {
@@ -415,12 +524,35 @@ export function DataIngestion() {
                     <SelectItem value="File Upload">File Upload</SelectItem>
                     <SelectItem value="API Endpoint">API Endpoint</SelectItem>
                     <SelectItem value="Database">Database</SelectItem>
+                    <SelectItem value="GitHub">GitHub</SelectItem>
                     <SelectItem value="JIRA">JIRA</SelectItem>
                     <SelectItem value="Confluence">Confluence</SelectItem>
                     <SelectItem value="ADO">Azure DevOps</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+              {newSourceType === "GitHub" && (
+                <div className="space-y-4">
+                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                        <Github className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-blue-900 dark:text-blue-100">GitHub Integration</h4>
+                        <p className="text-sm text-blue-700 dark:text-blue-300">Configure repository settings and sync options</p>
+                      </div>
+                    </div>
+                    <Button 
+                      onClick={() => setIsGitHubDrawerOpen(true)}
+                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                    >
+                      <Github className="h-4 w-4 mr-2" />
+                      Configure GitHub Settings
+                    </Button>
+                  </div>
+                </div>
+              )}
               {newSourceType === "File Upload" && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Upload File</label>
@@ -568,6 +700,7 @@ export function DataIngestion() {
                     <SelectItem value="File Upload">File Upload</SelectItem>
                     <SelectItem value="API Endpoint">API Endpoint</SelectItem>
                     <SelectItem value="Database">Database</SelectItem>
+                    <SelectItem value="GitHub">GitHub</SelectItem>
                     <SelectItem value="JIRA">JIRA</SelectItem>
                     <SelectItem value="Confluence">Confluence</SelectItem>
                     <SelectItem value="ADO">Azure DevOps</SelectItem>
@@ -950,6 +1083,33 @@ export function DataIngestion() {
         isOpen={isTrackingModalOpen}
         onOpenChange={setIsTrackingModalOpen}
         sourceId={trackingSourceId}
+      />
+      
+      {/* GitHub source configuration drawer */}
+      <GitHubSourceDrawer
+        isOpen={isGitHubDrawerOpen}
+        onOpenChange={setIsGitHubDrawerOpen}
+        onSave={(settings) => {
+          const sourceData = {
+            name: settings.name,
+            type: 'GitHub' as IngestionSourceType,
+            url: settings.repository,
+            // Store GitHub-specific settings in a way that can be retrieved later
+            // You might want to extend the IngestionSource interface to include these
+            username: settings.accessToken ? 'token' : undefined,
+            password: settings.accessToken || undefined,
+          };
+          
+          const newSourceId = addSource(sourceData);
+          
+          // Reset form and close dialog
+          resetForm();
+          setIsAddDialogOpen(false);
+          
+          // Show success message or handle as needed
+          console.log('GitHub source created:', newSourceId, settings);
+        }}
+        sourceName={newSourceName}
       />
     </div>
   );

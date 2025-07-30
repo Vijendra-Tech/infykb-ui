@@ -1,6 +1,8 @@
+import { ReactNode } from 'react';
 import { GitHubIssue, GitHubService } from './github-service';
 
 export interface MultiRepoSearchResult {
+  title: ReactNode;
   issue: GitHubIssue;
   repository: string;
   relevanceScore: number;
@@ -154,6 +156,7 @@ export class EnhancedGitHubService {
 
           if (relevanceData.score >= minRelevance) {
             results.push({
+              title: issue.title,
               issue,
               repository: repoName,
               relevanceScore: relevanceData.score,

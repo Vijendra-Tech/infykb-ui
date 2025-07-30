@@ -4,7 +4,7 @@
 
 // Configuration for Azure Functions
 const AZURE_FUNCTION_BASE_URL = process.env.NEXT_PUBLIC_AZURE_FUNCTION_URL || 'https://your-function-app-name.azurewebsites.net';
-const AZURE_FUNCTION_KEY = process.env.NEXT_PUBLIC_AZURE_FUNCTION_KEY || '';
+const AZURE_FUNCTION_KEY = process.env.AZURE_FUNCTION_KEY || '';
 
 /**
  * Interface for ingested data information
@@ -31,9 +31,9 @@ export async function fetchIngestedData(): Promise<IngestedDataInfo[]> {
  * Generic function to call Azure Functions
  * @param functionName Name of the Azure function to call
  * @param data Data to send to the function
- * @returns Promise with array of ingested data information
+ * @returns Promise with unknown data
  */
-export async function callAzureFunction(functionName: string, data: Record<string, any>): Promise<IngestedDataInfo[]> {
+export async function callAzureFunction(functionName: string, data: Record<string, unknown>): Promise<IngestedDataInfo[]> {
   try {
     // Build the URL with function key if available
     let url = `${AZURE_FUNCTION_BASE_URL}/api/${functionName}`;

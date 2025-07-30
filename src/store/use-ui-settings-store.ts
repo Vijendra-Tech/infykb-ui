@@ -171,7 +171,6 @@ const updateCSSProperties = (settings: UISettings) => {
       rootHasClass: root.classList.contains('animations-disabled'),
       documentElementHasClass: document.documentElement.classList.contains('animations-disabled'),
       shouldAnimate,
-      allElementsWithClass: document.querySelectorAll('.animations-disabled').length
     });
   };
   

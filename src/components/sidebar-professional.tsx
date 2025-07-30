@@ -11,8 +11,6 @@ import {
   FileText,
   Home,
   Menu,
-  Pencil,
-  Share2,
   UserCheck,
   Users,
   X,
