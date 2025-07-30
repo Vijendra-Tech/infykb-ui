@@ -653,13 +653,6 @@ export function AgenticChatInterface({ className }: AgenticChatProps) {
             <div className="mb-6">
               <div className="flex flex-wrap gap-2 justify-center">
                 <button 
-                  onClick={startNewChat}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-full transition-colors border border-blue-200 dark:border-blue-800"
-                >
-                  <Plus className="h-3 w-3" />
-                  New Chat
-                </button>
-                <button 
                   onClick={() => setInputValue("Help me explore this ticket and understand the issue better")}
                   className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors"
                 >
@@ -693,13 +686,6 @@ export function AgenticChatInterface({ className }: AgenticChatProps) {
                 >
                   <Code className="h-3 w-3" />
                   Improve code
-                </button>
-                <button 
-                  onClick={startNewChat}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors"
-                >
-                  <Plus className="h-3 w-3" />
-                  New Chat
                 </button>
               </div>
             </div>

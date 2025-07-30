@@ -745,7 +745,7 @@ export function AgentChatInterface({ agentId, sessionId, onBack, className = '',
                     <MessageBubble
                       message={message}
                       agent={agent!}
-                      onCopy={() => copyMessage(message.content)}
+                      onCopy={() => copyMessage(message.content || '')}
                       onRate={(rating) => rateMessage(message.id, rating)}
                     />
                   </motion.div>
@@ -834,15 +834,7 @@ export function AgentChatInterface({ agentId, sessionId, onBack, className = '',
                   <ArrowLeft className="h-3 w-3 mr-1 rotate-180" />
                   Next Steps
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setInputMessage('Can you help me with something else?')}
-                  className="h-7 px-3 text-xs bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-full transition-all duration-200"
-                >
-                  <Star className="h-3 w-3 mr-1" />
-                  New Topic
-                </Button>
+
               </div>
             </div>
           </motion.div>
