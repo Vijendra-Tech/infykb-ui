@@ -295,15 +295,26 @@ export class ChatHistoryService {
   // Utility Methods
   static async getRecentSessions(userId: string, limit: number = 10): Promise<ChatSession[]> {
     try {
+      console.log('ChatHistoryService.getRecentSessions: Querying for userId:', userId);
+      
+      // First, let's check if there are any sessions at all
+      const allSessions = await db.chatSessions.toArray();
+      console.log('ChatHistoryService.getRecentSessions: Total sessions in DB:', allSessions.length);
+      
       const sessions = await db.chatSessions
         .where('userId')
         .equals(userId)
         .filter(session => session.status === 'active')
         .toArray();
       
-      return sessions
+      console.log('ChatHistoryService.getRecentSessions: Found sessions for user:', sessions.length);
+      
+      const sortedSessions = sessions
         .sort((a, b) => b.lastMessageAt.getTime() - a.lastMessageAt.getTime())
         .slice(0, limit);
+        
+      console.log('ChatHistoryService.getRecentSessions: Returning sessions:', sortedSessions.length);
+      return sortedSessions;
     } catch (error) {
       console.error('Error getting recent sessions:', error);
       throw error;

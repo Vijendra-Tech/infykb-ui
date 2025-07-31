@@ -1,4 +1,5 @@
 import { GitHubIssue, githubService } from './github-service';
+import { ingestedGitHubSearchService } from '@/services/ingested-github-search-service';
 
 export interface SolutionSuggestion {
   type: 'existing_issue' | 'code_snippet' | 'documentation' | 'create_issue';
@@ -469,10 +470,13 @@ ${query}
     // Analyze intent and extract keywords
     const { intent, keywords, confidence: intentConfidence } = this.analyzeIntent(query);
     
-    // Search for existing issues
-    const relatedIssues = await githubService.searchIssues(query, {
+    // Search for existing issues in ingested data only
+    const relatedIssues = await ingestedGitHubSearchService.searchIngestedData(query, {
       limit: 5,
-      minRelevance: 0.3
+      minRelevance: 0.3,
+      includeBody: true,
+      includePullRequests: false,
+      includeDiscussions: false
     });
 
     const suggestions: SolutionSuggestion[] = [];

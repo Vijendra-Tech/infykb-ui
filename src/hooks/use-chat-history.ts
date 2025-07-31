@@ -146,16 +146,25 @@ export function useChatHistory(userId?: string): UseChatHistoryReturn {
       setLoading(true);
       setError(null);
 
-      const loadedSessions = await ChatHistoryService.getChatSessions(filters);
+      // Ensure userId is included in filters
+      const sessionFilters = {
+        ...filters,
+        userId: userId || 'user-123' // Use provided userId or fallback
+      };
+      
+      console.log('Loading sessions with filters:', sessionFilters);
+      const loadedSessions = await ChatHistoryService.getChatSessions(sessionFilters);
+      console.log('Loaded sessions from database:', loadedSessions.length);
       setSessions(loadedSessions);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load sessions';
       setError(errorMessage);
+      console.error('Error loading sessions:', err);
       throw err;
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [userId]);
 
   // Message Operations
   const addMessage = useCallback(async (data: CreateChatMessageData): Promise<ChatMessage> => {
@@ -307,17 +316,23 @@ export function useChatHistory(userId?: string): UseChatHistoryReturn {
   }, [userId]);
 
   const getRecentSessions = useCallback(async (limit: number = 10): Promise<void> => {
-    if (!userId) return;
+    if (!userId) {
+      console.log('getRecentSessions: No userId provided');
+      return;
+    }
 
     try {
       setLoading(true);
       setError(null);
 
+      console.log('getRecentSessions: Loading recent sessions for userId:', userId);
       const recentSessions = await ChatHistoryService.getRecentSessions(userId, limit);
+      console.log('getRecentSessions: Loaded sessions:', recentSessions.length);
       setSessions(recentSessions);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load recent sessions';
       setError(errorMessage);
+      console.error('getRecentSessions error:', err);
       throw err;
     } finally {
       setLoading(false);

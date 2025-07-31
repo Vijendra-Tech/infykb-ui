@@ -35,8 +35,12 @@ import { GitHubIssue, githubService, formatIssueDate } from "@/lib/github-servic
 import { enhancedGitHubService, MultiRepoSearchResult } from "@/lib/enhanced-github-service";
 import { agenticAI, AnalysisResult, SolutionSuggestion } from "@/lib/agentic-ai-service";
 import { CodeSnippetCard } from "@/components/generative-ui-components";
+import { SimilarIssuesDisplay } from "@/components/similar-issues-display";
 import { useToast } from "@/components/ui/use-toast";
 import { useChatHistory } from "@/hooks/use-chat-history";
+import ChatHistoryService from "@/services/chat-history-service";
+import { ingestedGitHubSearchService } from "@/services/ingested-github-search-service";
+import { ChatMessage } from "@/lib/database";
 import { generateUUID } from "@/lib/utils";
 
 interface Message {
@@ -65,9 +69,10 @@ interface KnowledgeGraphNode {
 
 interface AgenticChatProps {
   className?: string;
+  sessionId?: string;
 }
 
-export function AgenticChatInterface({ className }: AgenticChatProps) {
+export function AgenticChatInterface({ className, sessionId }: AgenticChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -89,6 +94,51 @@ export function AgenticChatInterface({ className }: AgenticChatProps) {
   }, []);
 
   const { toast } = useToast();
+
+  // Load specific session when sessionId is provided
+  useEffect(() => {
+    const loadSpecificSession = async () => {
+      if (sessionId) {
+        try {
+          console.log('Loading session:', sessionId);
+          
+          // Load session and messages directly from service to avoid state timing issues
+          const [session, sessionMessages] = await Promise.all([
+            ChatHistoryService.getChatSession(sessionId),
+            ChatHistoryService.getChatMessages(sessionId)
+          ]);
+          
+          if (!session) {
+            throw new Error('Session not found');
+          }
+          
+          // Convert chat history messages to Message format for the UI
+          const historyMessages = sessionMessages.map((msg: ChatMessage): Message => ({
+            id: msg.uuid || generateUUID(),
+            content: msg.content,
+            sender: msg.sender as 'user' | 'assistant',
+            timestamp: new Date(msg.timestamp),
+            type: (msg.type === 'error' ? 'analysis' : msg.type) as 'text' | 'code' | 'analysis' || 'text',
+            metadata: msg.metadata
+          }));
+          
+          setMessages(historyMessages);
+          setCurrentChatId(sessionId);
+          
+          console.log('Session loaded successfully:', sessionId, 'Messages:', historyMessages.length);
+        } catch (error) {
+          console.error('Failed to load session:', error);
+          toast({
+            title: "Error",
+            description: "Failed to load conversation history",
+            variant: "destructive"
+          });
+        }
+      }
+    };
+    
+    loadSpecificSession();
+  }, [sessionId]); // Only depend on sessionId to prevent infinite loop
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -120,26 +170,31 @@ export function AgenticChatInterface({ className }: AgenticChatProps) {
               title: chatTitle || 'New Chat',
               userId: 'user-123', // TODO: Get actual user ID from auth context
               organizationId: 'org-123', // TODO: Get actual org ID from auth context
+              projectId: undefined,
               metadata: {
+                tags: ['typescript', 'support'],
                 isFavorite: false,
-                summary: firstUserMessage.content.substring(0, 100)
+                aiModel: 'gpt-4',
+                totalTokens: 0
               }
             });
             
-            console.log('Chat session created:', session);
             setCurrentChatId(session.uuid);
+            console.log('Chat session created with ID:', session.uuid);
             
-            // Save the first user message to the new session
-            await chatHistory.addMessage({
-              sessionId: session.uuid,
-              content: firstUserMessage.content,
-              sender: 'user',
-              type: 'text'
-            });
+            // Save all existing messages to the session
+            for (const message of messages) {
+              await chatHistory.addMessage({
+                sessionId: session.uuid,
+                content: message.content,
+                sender: message.sender,
+                type: message.type || 'text',
+                metadata: message.metadata
+              });
+            }
             
-            console.log('First message saved to session');
-          } catch (err) {
-            console.error('Failed to create chat session:', err);
+          } catch (error) {
+            console.error('Failed to create chat session:', error);
           }
         }
       }
@@ -147,6 +202,24 @@ export function AgenticChatInterface({ className }: AgenticChatProps) {
     
     createNewSession();
   }, [messages, currentChatId, chatHistory]);
+
+  // Save new messages to database when they are added
+  const saveMessageToHistory = async (message: Message) => {
+    if (currentChatId) {
+      try {
+        await chatHistory.addMessage({
+          sessionId: currentChatId,
+          content: message.content,
+          sender: message.sender,
+          type: message.type || 'text',
+          metadata: message.metadata
+        });
+        console.log('Message saved to chat history:', message.id);
+      } catch (error) {
+        console.error('Failed to save message to chat history:', error);
+      }
+    }
+  };
 
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInputValue(e.target.value);
@@ -175,21 +248,9 @@ export function AgenticChatInterface({ className }: AgenticChatProps) {
 
     setMessages(prev => [...prev, userMessage]);
     
-    // Save user message to Dexie if we have a current chat session
-    // (Skip saving if this is the first message as it's handled in the useEffect)
-    if (currentChatId && messages.length > 0) {
-      try {
-        await chatHistory.addMessage({
-          sessionId: currentChatId,
-          content: inputValue,
-          sender: 'user',
-          type: 'text'
-        });
-        console.log('User message saved to session');
-      } catch (err) {
-        console.error('Failed to save user message:', err);
-      }
-    }
+    // Save user message to database
+    await saveMessageToHistory(userMessage);
+
     setInputValue("");
     setIsLoading(true);
     setIsTyping(true);
@@ -203,21 +264,41 @@ export function AgenticChatInterface({ className }: AgenticChatProps) {
       // Simulate AI processing
       await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
 
-      // Get AI analysis
+      // Get AI analysis (now uses ingested data search internally)
       const analysis = await agenticAI.analyzeQuery(userMessage.content);
       
-      // Search for related issues
-      const issues = await githubService.searchIssues(userMessage.content);
+      // Check ingested data availability first
+      const dataStats = await ingestedGitHubSearchService.getIngestedDataStats();
+      console.log('Ingested data stats:', dataStats);
+      
+      // Search for related issues in ingested data only
+      const issues = await ingestedGitHubSearchService.searchIngestedData(userMessage.content, {
+        limit: 10,
+        minRelevance: 0.3,
+        includeBody: true,
+        includePullRequests: true,
+        includeDiscussions: true
+      });
+      
+      console.log('Search query:', userMessage.content);
+      console.log('Search results from ingested data:', issues);
+      
       setRelatedIssues(issues);
 
-      // Enhanced search across multiple repositories
-      const enhancedResults = await enhancedGitHubService.searchAcrossRepositories({
+      // Use the same ingested data results for enhanced issues
+      const enhancedResults = issues.map(issue => ({
+        issue: issue,
+        title: issue.title,
+        relevanceScore: issue.relevance_score,
+        matchType: issue.match_type === 'combined' ? 'comments' : issue.match_type as 'body' | 'title' | 'labels' | 'comments',
+        matchedText: issue.title,
+        repository: issue.repository || 'unknown'
+      }));
+      
+      console.log('Ingested data search results:', {
         query: userMessage.content,
-        includeBody: true,
-        includeComments: false,
-        state: 'all',
-        limit: 20,
-        minRelevance: 0.3
+        issuesFound: issues.length,
+        enhancedResultsCount: enhancedResults.length
       });
 
       const assistantMessage: Message = {
@@ -237,26 +318,8 @@ export function AgenticChatInterface({ className }: AgenticChatProps) {
 
       setMessages(prev => [...prev, assistantMessage]);
       
-      // Save assistant message to Dexie if we have a current chat session
-      if (currentChatId) {
-        try {
-          await chatHistory.addMessage({
-            sessionId: currentChatId,
-            content: analysis.response,
-            sender: 'assistant',
-            type: analysis.type as 'text' | 'code' | 'analysis' | 'error',
-            metadata: {
-              analysis,
-              relatedIssues: issues,
-              confidence: analysis.confidence,
-              followUpQuestions: analysis.followUpQuestions
-            }
-          });
-          console.log('Assistant message saved to session');
-        } catch (err) {
-          console.error('Failed to save assistant message:', err);
-        }
-      }
+      // Save assistant message to database
+      await saveMessageToHistory(assistantMessage);
     } catch (error) {
       console.error('Error processing message:', error);
       const errorMessage: Message = {
@@ -272,7 +335,7 @@ export function AgenticChatInterface({ className }: AgenticChatProps) {
       setIsTyping(false);
     }
   };
-
+  
   const openSideDrawer = (content: 'issues' | 'knowledge') => {
     setSideDrawerContent(content);
     setSideDrawerOpen(true);
@@ -321,7 +384,7 @@ export function AgenticChatInterface({ className }: AgenticChatProps) {
     issue.body?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const renderMessage = (message: Message) => {
+  const renderMessage = (message: Message, index: number) => {
     const isUser = message.sender === 'user';
     const reaction = messageReactions[message.id];
     
@@ -389,21 +452,18 @@ export function AgenticChatInterface({ className }: AgenticChatProps) {
                 )}
               </div>
 
-              {/* Enhanced Issues Display */}
-              {message.metadata?.enhancedIssues && message.metadata.enhancedIssues.length > 0 && (
-                <div className="mt-4 p-3 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700">
-                  <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
-                    <Target className="h-4 w-4" />
-                    Related Issues Across Repositories
-                  </h4>
-                  <div className="space-y-2">
-                    {message.metadata.enhancedIssues.slice(0, 3).map((result, index) => (
-                      <div key={index} className="text-sm p-2 bg-white dark:bg-slate-800 rounded border">
-                        <div className="font-medium">{result.repository}</div>
-                        <div className="text-slate-600 dark:text-slate-400">{result.title}</div>
-                      </div>
-                    ))}
-                  </div>
+              {/* Similar Issues Display - Only show for the latest AI message */}
+              {!isUser && relatedIssues && relatedIssues.length > 0 && index === messages.length - 1 && (
+                <div className="mt-4">
+                  <SimilarIssuesDisplay 
+                    issues={relatedIssues.map((issue, idx) => ({
+                      ...issue,
+                      relevance_score: 1.0 - (idx * 0.1), // Decreasing relevance based on order
+                      match_type: 'combined' as const, // Default match type
+                      repository: issue.html_url.match(/github\.com\/([^/]+\/[^/]+)/)?.[1] || undefined
+                    }))}
+                    searchQuery={messages.filter(m => m.sender === 'user').pop()?.content}
+                  />
                 </div>
               )}
 
@@ -619,7 +679,7 @@ export function AgenticChatInterface({ className }: AgenticChatProps) {
                   </div>
                 ) : (
                   <div className="space-y-1">
-                    {messages.map(renderMessage)}
+                    {messages.map((message, index) => renderMessage(message, index))}
                     {isTyping && (
                       <div className="flex justify-start mb-8">
                         <div className="flex items-start gap-4 max-w-[85%]">

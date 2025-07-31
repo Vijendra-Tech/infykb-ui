@@ -4,7 +4,6 @@ import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { useDexieAuthStore } from '@/store/use-dexie-auth-store';
 import { SidebarProvider } from '@/context/sidebar-context';
-import { Header } from '@/components/header';
 import { Sidebar } from '@/components/sidebar';
 
 interface LayoutWrapperProps {
@@ -48,12 +47,9 @@ export function LayoutWrapper({ children }: LayoutWrapperProps) {
     <SidebarProvider>
       <div className="flex h-screen overflow-hidden">
         {user && <Sidebar />}
-        <div className="flex flex-col flex-1 overflow-hidden">
-          <Header />
-          <main className="flex-1 overflow-auto pt-4">
-            {children}
-          </main>
-        </div>
+        <main className="flex-1 overflow-auto">
+          {children}
+        </main>
       </div>
     </SidebarProvider>
   );

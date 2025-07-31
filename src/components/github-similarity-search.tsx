@@ -38,15 +38,17 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 import { GitHubService, GitHubIssue, SimilaritySearchResult } from '@/services/github-service';
+import { IngestedSearchResult, ingestedGitHubSearchService } from '@/services/ingested-github-search-service';
 
 
 
 interface GitHubSimilaritySearchProps {
   onIssueSelect?: (result: SimilaritySearchResult) => void;
+  onSearchResults?: (results: IngestedSearchResult[]) => void;
   className?: string;
 }
 
-export function GitHubSimilaritySearch({ onIssueSelect, className }: GitHubSimilaritySearchProps) {
+export function GitHubSimilaritySearch({ onIssueSelect, onSearchResults, className }: GitHubSimilaritySearchProps) {
   const { getMotionProps } = useAnimation();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SimilaritySearchResult[]>([]);
@@ -116,18 +118,71 @@ export function GitHubSimilaritySearch({ onIssueSelect, className }: GitHubSimil
     setShowSuggestions(false);
 
     try {
-      const searchResults = await githubService.searchSimilarIssues(query, {
-        state: filters.state === 'all' ? undefined : filters.state as 'open' | 'closed',
-        repository: filters.repository || undefined,
-        labels: filters.labels.length > 0 ? filters.labels : undefined,
-        dateRange: filters.dateRange === 'all' ? undefined : filters.dateRange
+      // Use ingested data search service
+      const ingestedResults = await ingestedGitHubSearchService.searchIngestedData(query, {
+        limit: 50,
+        minRelevance: 0.1,
+        includeBody: true,
+        includePullRequests: true,
+        includeDiscussions: true
       });
 
+      console.log('Ingested search results:', ingestedResults);
+
+      // Convert ingested results to similarity search results format
+      const searchResults: SimilaritySearchResult[] = ingestedResults.map(result => ({
+        issue: {
+          id: result.id,
+          title: result.title,
+          body: result.body,
+          state: result.state,
+          labels: result.labels,
+          user: result.user,
+          html_url: result.html_url,
+          number: result.number,
+          created_at: result.created_at,
+          updated_at: result.updated_at,
+          comments: result.comments,
+          assignees: [],
+          reactions: {
+            total_count: 0,
+            '+1': 0,
+            '-1': 0,
+            laugh: 0,
+            hooray: 0,
+            confused: 0,
+            heart: 0,
+            rocket: 0,
+            eyes: 0
+          },
+          locked: false,
+          pull_request: result.pull_request,
+          relevance_score: result.relevance_score,
+          search_vector: '',
+          indexed_at: new Date().toISOString(),
+          comment_count: result.comments,
+          last_activity: result.updated_at,
+          repository: result.repository || 'unknown'
+        },
+        score: result.relevance_score || 0,
+        snippet: result.title
+      }));
+
       setResults(searchResults);
+      
+      // Call the onSearchResults callback for graph visualization
+      if (onSearchResults) {
+        onSearchResults(ingestedResults);
+      }
     } catch (error) {
       console.error('Search failed:', error);
       setError('Failed to search issues. Please try again.');
       setResults([]);
+      
+      // Call callback with empty results on error
+      if (onSearchResults) {
+        onSearchResults([]);
+      }
     } finally {
       setIsLoading(false);
     }

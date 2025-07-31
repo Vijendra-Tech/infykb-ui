@@ -14,10 +14,30 @@ import {
   Bot,
   BarChart,
   UserCheck,
-  Search
+  Search,
+  History,
+  Edit,
+  Settings,
+  LogOut,
+  LayoutDashboard,
+  Globe,
+  Building,
+  Palette,
+  ChevronUp
 } from 'lucide-react';
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { ModeToggle } from "@/components/mode-toggle";
+import { AnimationToggle } from "@/components/animation-toggle";
+import { ChatHistory } from "@/components/chat-history";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import { Logo } from "@/components/ui/logo";
 
@@ -162,11 +182,13 @@ const SidebarSection = ({
   );
 };
 
-export function Sidebar() {
+export const Sidebar = () => {
   const { collapsed, setCollapsed } = useSidebar();
-  const { isAdmin, isApprover, isMember } = useDexieAuthStore();
-  const { chats } = useChatHistoryStore();
+  const { user, isAuthenticated, logout, isAdmin, isApprover, isMember } = useDexieAuthStore();
+  const { chats, addChat } = useChatHistoryStore();
   const pathname = usePathname();
+  const router = useRouter();
+  const [isChatHistoryOpen, setIsChatHistoryOpen] = useState(false);
 
   return (
     <div
@@ -207,6 +229,8 @@ export function Sidebar() {
           </button>
         )}
       </div>
+
+
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-auto py-6 px-4 bg-white dark:bg-slate-950 relative">
@@ -363,6 +387,157 @@ export function Sidebar() {
         )}
 
       </div>
+      
+      {/* Bottom Corner User Menu */}
+      {user && (
+        <div className="mt-auto border-t border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50">
+          {!collapsed ? (
+            /* Expanded User Menu */
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="w-full p-4 flex items-center gap-3 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group">
+                  <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                    {user?.name?.charAt(0).toUpperCase() || 'U'}
+                  </div>
+                  <div className="flex-1 text-left">
+                    <div className="font-medium text-slate-700 dark:text-slate-300 text-sm">{user?.name}</div>
+                    <div className="text-slate-500 dark:text-slate-400 text-xs capitalize">{user?.role?.replace('_', ' ')}</div>
+                  </div>
+                  <ChevronUp className="h-4 w-4 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="top" align="start" className="w-56 mb-2 ml-4">
+                <DropdownMenuItem onClick={() => setIsChatHistoryOpen(!isChatHistoryOpen)}>
+                  <History className="h-4 w-4 mr-2" />
+                  Chat History
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {
+                  addChat({ title: "New Chat" });
+                  router.push("/chat");
+                }}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  New Chat
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => router.push('/dashboard')}>
+                  <LayoutDashboard className="h-4 w-4 mr-2" />
+                  Dashboard
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.open('https://example.com', '_blank')}>
+                  <Globe className="h-4 w-4 mr-2" />
+                  Website
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push('/create-organization')}>
+                  <Building className="h-4 w-4 mr-2" />
+                  Create Organization
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>
+                  <Palette className="h-4 w-4 mr-2" />
+                  Theme
+                  <div className="ml-auto">
+                    <ModeToggle />
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <Settings className="h-4 w-4 mr-2" />
+                  Animation
+                  <div className="ml-auto">
+                    <AnimationToggle />
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={() => {
+                    logout();
+                    router.push('/auth/login');
+                  }}
+                  className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950"
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Log out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            /* Collapsed User Menu */
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="w-full p-2 flex justify-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                  <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                    {user?.name?.charAt(0).toUpperCase() || 'U'}
+                  </div>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="right" align="end" className="w-56 mb-2">
+                <div className="px-2 py-1.5 text-sm font-medium text-slate-700 dark:text-slate-300">
+                  {user?.name}
+                </div>
+                <div className="px-2 pb-2 text-xs text-slate-500 dark:text-slate-400 capitalize">
+                  {user?.role?.replace('_', ' ')}
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setIsChatHistoryOpen(!isChatHistoryOpen)}>
+                  <History className="h-4 w-4 mr-2" />
+                  Chat History
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {
+                  addChat({ title: "New Chat" });
+                  router.push("/chat");
+                }}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  New Chat
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => router.push('/dashboard')}>
+                  <LayoutDashboard className="h-4 w-4 mr-2" />
+                  Dashboard
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.open('https://example.com', '_blank')}>
+                  <Globe className="h-4 w-4 mr-2" />
+                  Website
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push('/create-organization')}>
+                  <Building className="h-4 w-4 mr-2" />
+                  Create Organization
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>
+                  <Palette className="h-4 w-4 mr-2" />
+                  Theme
+                  <div className="ml-auto">
+                    <ModeToggle />
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <Settings className="h-4 w-4 mr-2" />
+                  Animation
+                  <div className="ml-auto">
+                    <AnimationToggle />
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={() => {
+                    logout();
+                    router.push('/auth/login');
+                  }}
+                  className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950"
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Log out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
+      )}
+      
+      {/* Chat History Modal */}
+      <ChatHistory 
+        isOpen={isChatHistoryOpen} 
+        onClose={() => setIsChatHistoryOpen(false)} 
+      />
     </div>
   );
 }
