@@ -3,6 +3,8 @@
 import { useState, useCallback } from "react";
 import { IngestionTrackingDrawer } from "./ingestion-tracking-drawer";
 import { GitHubSourceDrawer } from "./github-source-drawer";
+import { AddSourceDrawer } from "./add-source-drawer";
+import { EditSourceDrawer } from "./edit-source-drawer";
 import { useDataIngestionStore, type IngestionSourceType, type IngestionSource } from "@/store/use-data-ingestion-store";
 import { githubService } from "@/services/github-service";
 import { githubDataService } from "@/services/github-data-service";
@@ -12,8 +14,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Upload, Database, Globe, RefreshCw, Play, X, Plus, FileText, Link, Pencil, UploadCloud, CheckCircle, Github } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Upload, Database, Globe, RefreshCw, Play, X, Plus, FileText, Link, Pencil, UploadCloud, CheckCircle, Github, Building2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
 import {
   Pagination,
   PaginationContent,
@@ -105,7 +108,7 @@ export function DataIngestion() {
       return;
     }
 
-    if (["JIRA", "Confluence", "ADO", "API Endpoint", "Database"].includes(newSourceType) && !sourceUrl) {
+    if (["JIRA", "Salesforce", "API Endpoint", "Database"].includes(newSourceType) && !sourceUrl) {
       setUrlError("URL is required for this source type");
       return;
     }
@@ -230,7 +233,7 @@ export function DataIngestion() {
       return;
     }
 
-    if (["JIRA", "Confluence", "ADO", "API Endpoint", "Database"].includes(editSourceType) && !editSourceUrl) {
+    if (["JIRA", "Salesforce", "API Endpoint", "Database"].includes(editSourceType) && !editSourceUrl) {
       setUrlError("URL is required for this source type");
       return;
     }
@@ -448,10 +451,9 @@ export function DataIngestion() {
         return <Database className="h-4 w-4 text-slate-600 dark:text-slate-400" />;
       case "JIRA":
         return <Globe className="h-4 w-4 text-slate-600 dark:text-slate-400" />;
-      case "Confluence":
-        return <FileText className="h-4 w-4 text-slate-600 dark:text-slate-400" />;
-      case "ADO":
-        return <Database className="h-4 w-4 text-slate-600 dark:text-slate-400" />;
+
+      case "Salesforce":
+        return <Building2 className="h-4 w-4 text-slate-600 dark:text-slate-400" />;
       default:
         return null;
     }
@@ -485,287 +487,19 @@ export function DataIngestion() {
                   Seamlessly manage your knowledge base data sources and streamline content ingestion workflows
                 </p>
               </div>
-            <Dialog open={isAddDialogOpen} onOpenChange={handleDialogChange}>
-              <DialogTrigger asChild>
-                <Button className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
-                  <Plus className="h-5 w-5" />
-                  Add New Source
-                </Button>
-              </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>Add New Ingestion Source</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <label htmlFor="sourceName" className="text-sm font-medium">Source Name</label>
-                <Input 
-                  id="sourceName" 
-                  placeholder="e.g., Customer Support Data" 
-                  value={newSourceName}
-                  onChange={(e) => {
-                    setNewSourceName(e.target.value);
-                    if (e.target.value.trim()) setNameError(null);
-                  }}
-                  className={nameError ? "border-red-300 focus:ring-red-500" : ""}
-                />
-                {nameError && <p className="text-sm text-red-500">{nameError}</p>}
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="sourceType" className="text-sm font-medium">Source Type</label>
-                <Select 
-                  value={newSourceType} 
-                  onValueChange={(value) => setNewSourceType(value as IngestionSourceType)}
-                >
-                  <SelectTrigger id="sourceType">
-                    <SelectValue placeholder="Select source type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="File Upload">File Upload</SelectItem>
-                    <SelectItem value="API Endpoint">API Endpoint</SelectItem>
-                    <SelectItem value="Database">Database</SelectItem>
-                    <SelectItem value="GitHub">GitHub</SelectItem>
-                    <SelectItem value="JIRA">JIRA</SelectItem>
-                    <SelectItem value="Confluence">Confluence</SelectItem>
-                    <SelectItem value="ADO">Azure DevOps</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {newSourceType === "GitHub" && (
-                <div className="space-y-4">
-                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                        <Github className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                      </div>
-                      <div>
-                        <h4 className="font-medium text-blue-900 dark:text-blue-100">GitHub Integration</h4>
-                        <p className="text-sm text-blue-700 dark:text-blue-300">Configure repository settings and sync options</p>
-                      </div>
-                    </div>
-                    <Button 
-                      onClick={() => setIsGitHubDrawerOpen(true)}
-                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                    >
-                      <Github className="h-4 w-4 mr-2" />
-                      Configure GitHub Settings
-                    </Button>
-                  </div>
-                </div>
-              )}
-              {newSourceType === "File Upload" && (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Upload File</label>
-                  <div 
-                    className={`border-2 border-dashed rounded-md p-6 ${isDragging ? 'border-blue-400 bg-blue-50' : 'border-gray-200'}`}
-                    onDragEnter={handleDragEnter}
-                    onDragLeave={handleDragLeave}
-                    onDragOver={handleDragOver}
-                    onDrop={handleDrop}
-                  >
-                    <div className="flex flex-col items-center justify-center space-y-2 text-center">
-                      <UploadCloud className={`h-8 w-8 ${isDragging ? 'text-blue-500' : 'text-gray-400'}`} />
-                      <div className="text-sm font-medium">
-                        {isDragging ? 'Drop your file here' : 'Drag & drop your file here'}
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        or click to browse (PDF, DOCX, TXT, CSV, JSON - max 50MB)
-                      </p>
-                      <Input
-                        type="file"
-                        className="hidden"
-                        id="file-upload"
-                        onChange={handleFileChange}
-                      />
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        size="sm" 
-                        className="mt-2"
-                        onClick={() => document.getElementById('file-upload')?.click()}
-                      >
-                        Browse Files
-                      </Button>
-                    </div>
-                  </div>
-                  {selectedFile ? (
-                    <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-md p-2 mt-2">
-                      <div className="flex items-center">
-                        <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
-                        <span className="text-sm font-medium">{selectedFile.name}</span>
-                      </div>
-                      <button 
-                        type="button" 
-                        onClick={() => setSelectedFile(null)}
-                        className="text-gray-500 hover:text-gray-700"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ) : fileError ? (
-                    <p className="text-sm text-red-500">{fileError}</p>
-                  ) : null}
-                </div>
-              )}
-              
-              {/* URL, Username, Password fields for JIRA, Confluence, ADO, API Endpoint, and Database */}
-              {["JIRA", "Confluence", "ADO", "API Endpoint", "Database"].includes(newSourceType) && (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label htmlFor="sourceUrl" className="text-sm font-medium">URL</label>
-                    <Input
-                      id="sourceUrl"
-                      placeholder={`Enter ${newSourceType} URL`}
-                      value={sourceUrl}
-                      onChange={(e) => {
-                        setSourceUrl(e.target.value);
-                        if (e.target.value.trim()) setUrlError(null);
-                      }}
-                      className={urlError ? "border-red-300 focus:ring-red-500" : ""}
-                    />
-                    {urlError && <p className="text-sm text-red-500">{urlError}</p>}
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label htmlFor="sourceUsername" className="text-sm font-medium">Username</label>
-                    <Input
-                      id="sourceUsername"
-                      placeholder="Enter username (optional)"
-                      value={sourceUsername}
-                      onChange={(e) => setSourceUsername(e.target.value)}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label htmlFor="sourcePassword" className="text-sm font-medium">Password/API Key</label>
-                    <Input
-                      id="sourcePassword"
-                      type="password"
-                      placeholder="Enter password or API key (optional)"
-                      value={sourcePassword}
-                      onChange={(e) => setSourcePassword(e.target.value)}
-                    />
-                  </div>
-                </div>
-              )}
-              <div className="flex justify-end gap-2 pt-4">
-                <Button variant="outline" onClick={() => handleDialogChange(false)} disabled={isSubmitting}>Cancel</Button>
-                <Button 
-                  onClick={handleAddSource} 
-                  disabled={isSubmitting}
-                  className={isSubmitting ? "opacity-80" : ""}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      Adding...
-                    </>
-                  ) : "Add Source"}
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+              <Button 
+                onClick={() => setIsAddDialogOpen(true)}
+                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5"
+              >
+                <Plus className="h-5 w-5" />
+                Add New Source
+              </Button>
 
-        <Dialog open={isEditDialogOpen} onOpenChange={handleEditDialogChange}>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>Edit Ingestion Source</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <label htmlFor="editSourceName" className="text-sm font-medium">Source Name</label>
-                <Input 
-                  id="editSourceName" 
-                  placeholder="e.g., Customer Support Data" 
-                  value={editSourceName}
-                  onChange={(e) => {
-                    setEditSourceName(e.target.value);
-                    if (e.target.value.trim()) setNameError(null);
-                  }}
-                  className={nameError ? "border-red-300 focus:ring-red-500" : ""}
-                />
-                {nameError && <p className="text-sm text-red-500">{nameError}</p>}
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="editSourceType" className="text-sm font-medium">Source Type</label>
-                <Select 
-                  value={editSourceType} 
-                  onValueChange={(value) => setEditSourceType(value as IngestionSourceType)}
-                >
-                  <SelectTrigger id="editSourceType">
-                    <SelectValue placeholder="Select source type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="File Upload">File Upload</SelectItem>
-                    <SelectItem value="API Endpoint">API Endpoint</SelectItem>
-                    <SelectItem value="Database">Database</SelectItem>
-                    <SelectItem value="GitHub">GitHub</SelectItem>
-                    <SelectItem value="JIRA">JIRA</SelectItem>
-                    <SelectItem value="Confluence">Confluence</SelectItem>
-                    <SelectItem value="ADO">Azure DevOps</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              {["JIRA", "Confluence", "ADO", "API Endpoint", "Database"].includes(editSourceType) && (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label htmlFor="editSourceUrl" className="text-sm font-medium">URL</label>
-                    <Input
-                      id="editSourceUrl"
-                      placeholder="https://example.com/api"
-                      value={editSourceUrl}
-                      onChange={(e) => {
-                        setEditSourceUrl(e.target.value);
-                        if (e.target.value.trim()) setUrlError(null);
-                      }}
-                      className={urlError ? "border-red-300 focus:ring-red-500" : ""}
-                    />
-                    {urlError && <p className="text-sm text-red-500">{urlError}</p>}
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label htmlFor="editSourceUsername" className="text-sm font-medium">Username</label>
-                    <Input
-                      id="editSourceUsername"
-                      placeholder="Enter username (optional)"
-                      value={editSourceUsername}
-                      onChange={(e) => setEditSourceUsername(e.target.value)}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label htmlFor="editSourcePassword" className="text-sm font-medium">Password/API Key</label>
-                    <Input
-                      id="editSourcePassword"
-                      type="password"
-                      placeholder="Enter new password or API key (optional)"
-                      value={editSourcePassword}
-                      onChange={(e) => setEditSourcePassword(e.target.value)}
-                    />
-                    <p className="text-xs text-gray-500">Leave blank to keep existing password/key</p>
-                  </div>
-                </div>
-              )}
-              <div className="flex justify-end gap-2 pt-4">
-                <Button variant="outline" onClick={() => handleEditDialogChange(false)} disabled={isSubmitting}>Cancel</Button>
-                <Button 
-                  onClick={handleUpdateSource} 
-                  disabled={isSubmitting}
-                  className={isSubmitting ? "opacity-80" : ""}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      Updating...
-                    </>
-                  ) : "Update Source"}
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <EditSourceDrawer 
+          isOpen={isEditDialogOpen}
+          onClose={() => handleEditDialogChange(false)}
+          source={editingSource}
+        />
           </div>
         </CardHeader>
           <CardContent className="p-6 flex flex-col h-full">
@@ -830,7 +564,7 @@ export function DataIngestion() {
                       </TableCell>
                       <TableCell className="p-4">{getStatusBadge(source.status)}</TableCell>
                       <TableCell>
-                        {["JIRA", "Confluence", "ADO", "API Endpoint", "Database"].includes(source.type) && source.url ? (
+                        {["JIRA", "Salesforce", "API Endpoint", "Database"].includes(source.type) && source.url ? (
                           <div className="text-sm space-y-1">
                             <div className="flex items-center gap-2 truncate max-w-[200px]" title={source.url}>
                               <div className="p-1 rounded bg-primary/20">
@@ -1083,6 +817,31 @@ export function DataIngestion() {
         isOpen={isTrackingModalOpen}
         onOpenChange={setIsTrackingModalOpen}
         sourceId={trackingSourceId}
+      />
+      
+      {/* Add new source drawer */}
+      <AddSourceDrawer
+        isOpen={isAddDialogOpen}
+        onOpenChange={setIsAddDialogOpen}
+        onSave={(data) => {
+          const sourceData = {
+            name: data.name,
+            type: data.type,
+            url: data.url,
+            username: data.username,
+            password: data.password,
+            description: data.description,
+          };
+          
+          const newSourceId = addSource(sourceData);
+          
+          // Reset form and close drawer
+          resetForm();
+          setIsAddDialogOpen(false);
+          
+          // Show success message or handle as needed
+          console.log('Source created:', newSourceId, data);
+        }}
       />
       
       {/* GitHub source configuration drawer */}

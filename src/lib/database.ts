@@ -283,7 +283,7 @@ export interface ChatMessage {
   sessionId: string;
   content: string;
   sender: 'user' | 'assistant';
-  type: 'text' | 'code' | 'analysis' | 'error';
+  type: 'text' | 'code' | 'analysis' | 'error' | 'ai_response';
   timestamp: Date;
   metadata?: {
     analysis?: any;

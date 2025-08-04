@@ -42,13 +42,32 @@ import ChatHistoryService from "@/services/chat-history-service";
 import { ingestedGitHubSearchService } from "@/services/ingested-github-search-service";
 import { ChatMessage } from "@/lib/database";
 import { generateUUID } from "@/lib/utils";
+import { InfinityKBLogoHero } from "@/components/ui/infinity-kb-logo";
+
+// AI Response Match structure
+interface AIResponseMatch {
+  title: string;
+  summary: string;
+  created: string;
+  user: string;
+  url: string | null;
+  score: number;
+}
+
+// AI Response structure
+interface AIResponse {
+  matches: AIResponseMatch[];
+}
 
 interface Message {
   id: string;
   content: string;
   sender: 'user' | 'assistant';
   timestamp: Date;
-  type?: 'text' | 'code' | 'analysis';
+  type?: 'text' | 'code' | 'analysis' | 'error' | 'ai_response';
+  isStreaming?: boolean;
+  streamedContent?: string;
+  aiResponse?: AIResponse;
   metadata?: {
     analysis?: AnalysisResult;
     suggestions?: SolutionSuggestion[];
@@ -57,6 +76,12 @@ interface Message {
     confidence?: number;
     followUpQuestions?: string[];
   };
+  analysis?: AnalysisResult
+  suggestions?: SolutionSuggestion[]
+  relatedIssues?: GitHubIssue[]
+  enhancedIssues?: MultiRepoSearchResult[]
+  confidence?: number
+  followUpQuestions?: string[]
 }
 
 interface KnowledgeGraphNode {
@@ -84,6 +109,8 @@ export function AgenticChatInterface({ className, sessionId }: AgenticChatProps)
   const [searchQuery, setSearchQuery] = useState("");
   const [messageReactions, setMessageReactions] = useState<Record<string, 'up' | 'down' | null>>({});
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
+  const [expandedSummaries, setExpandedSummaries] = useState<Record<string, { isExpanded: boolean; summary: string; isStreaming: boolean; streamedContent: string }>>({});
   
   // Dexie-based chat history integration
   const chatHistory = useChatHistory();
@@ -94,6 +121,140 @@ export function AgenticChatInterface({ className, sessionId }: AgenticChatProps)
   }, []);
 
   const { toast } = useToast();
+
+  // Function to simulate AI response with the provided structure
+  const simulateAIResponse = async (query: string): Promise<AIResponse> => {
+    // This simulates the AI response structure you provided
+    // In production, this would be replaced with actual AI API call
+    await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+    
+    return {
+      matches: [
+        {
+          title: "Security group inheritance issue in SuiteCRM",
+          summary: "Issue with security group inheritance when modifying records. The assigned user's security groups are incorrectly re-inherited during record modification instead of only at creation time.",
+          created: "2025-06-24T08:36:36Z",
+          user: "61022311",
+          url: "https://api.github.com/repos/SuiteCRM/SuiteCRM/issues/10693",
+          score: 1.0000001
+        },
+        {
+          title: "Fix for security group inheritance on record modification",
+          summary: "Pull request that modifies the Security Suite's 'Inherit from Assigned To User' functionality to ensure security group inheritance only occurs upon record creation, not during subsequent modifications.",
+          created: "2025-06-24T08:56:57Z",
+          user: "SinergiaCRM",
+          url: null,
+          score: 0.9032566
+        },
+        {
+          title: "Security group not inherit to child records",
+          summary: "Custom modules not inheriting security groups from parent to child records. Staff can see the application but nothing in subpanels. May be a bug or limitation for custom modules.",
+          created: "2019-08-04T15:41:42Z",
+          user: "28486136",
+          url: "https://api.github.com/repos/SuiteCRM/SuiteCRM/issues/7685",
+          score: 0.8009803
+        }
+      ]
+    };
+  };
+
+  // Function to generate summary from matches
+  const generateSummary = async (matches: AIResponseMatch[]): Promise<string> => {
+    // Simulate AI processing time
+    await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 1200));
+    
+    // Generate a comprehensive summary based on the matches
+    const topMatch = matches[0];
+    const totalMatches = matches.length;
+    
+    return `Based on ${totalMatches} relevant matches found, here's a comprehensive summary:\n\n` +
+           `The primary issue appears to be "${topMatch.title}" with a confidence score of ${topMatch.score.toFixed(4)}. ` +
+           `This issue was reported by user ${topMatch.user} and involves ${topMatch.summary.substring(0, 100)}...\n\n` +
+           `Key themes across all matches include security group inheritance, record modification behaviors, and potential bugs in custom modules. ` +
+           `The issues span from ${new Date(matches[matches.length - 1].created).getFullYear()} to ${new Date(matches[0].created).getFullYear()}, ` +
+           `indicating this is an ongoing concern in the system.\n\n` +
+           `Recommended next steps: Review the highest-scoring match for immediate solutions, and consider the patterns across all matches for systemic improvements.`;
+  };
+
+  // Function to handle individual match summarize button click
+  const handleMatchSummarize = async (match: AIResponseMatch, matchIndex: number) => {
+    const matchKey = `${match.title}-${matchIndex}`;
+    
+    // If already expanded, collapse it
+    if (expandedSummaries[matchKey]?.isExpanded) {
+      setExpandedSummaries(prev => ({
+        ...prev,
+        [matchKey]: { ...prev[matchKey], isExpanded: false }
+      }));
+      return;
+    }
+    
+    // Initialize the expanded state with streaming
+    setExpandedSummaries(prev => ({
+      ...prev,
+      [matchKey]: {
+        isExpanded: true,
+        summary: '',
+        isStreaming: true,
+        streamedContent: ''
+      }
+    }));
+    
+    // Generate enhanced summary for this specific match
+    const enhancedSummary = await generateMatchSummary(match);
+    
+    // Stream the summary text character by character
+    const streamDelay = 30;
+    let currentContent = '';
+    
+    for (let i = 0; i < enhancedSummary.length; i++) {
+      currentContent += enhancedSummary[i];
+      
+      setExpandedSummaries(prev => ({
+        ...prev,
+        [matchKey]: {
+          ...prev[matchKey],
+          streamedContent: currentContent
+        }
+      }));
+      
+      await new Promise(resolve => setTimeout(resolve, streamDelay));
+    }
+    
+    // Finalize the streaming
+    setExpandedSummaries(prev => ({
+      ...prev,
+      [matchKey]: {
+        ...prev[matchKey],
+        summary: enhancedSummary,
+        isStreaming: false
+      }
+    }));
+  };
+  
+  // Function to generate summary for a specific match
+  const generateMatchSummary = async (match: AIResponseMatch): Promise<string> => {
+    // Simulate AI processing time
+    await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 800));
+    
+    const createdDate = new Date(match.created);
+    const formattedDate = createdDate.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    
+    return `**Issue Analysis for: ${match.title}**\n\n` +
+           `**Summary:** ${match.summary}\n\n` +
+           `**Key Details:**\n` +
+           `• Reported by: ${match.user}\n` +
+           `• Date: ${formattedDate}\n` +
+           `• Confidence Score: ${match.score.toFixed(4)} (${match.score > 0.9 ? 'High' : match.score > 0.7 ? 'Medium' : 'Low'} relevance)\n\n` +
+           `**Impact Assessment:**\n` +
+           `This issue appears to be ${match.score > 0.9 ? 'highly relevant' : match.score > 0.7 ? 'moderately relevant' : 'somewhat relevant'} to your query. ` +
+           `${match.url ? 'You can view the full discussion and any solutions in the linked GitHub issue.' : 'This appears to be a pull request or internal discussion.'} ` +
+           `Consider reviewing this ${match.score > 0.8 ? 'as a priority' : 'for additional context'}.`;
+  };
 
   // Load specific session when sessionId is provided
   useEffect(() => {
@@ -235,6 +396,35 @@ export function AgenticChatInterface({ className, sessionId }: AgenticChatProps)
     }
   };
 
+  // Streaming text functionality
+  const streamText = async (text: string, messageId: string, delay: number = 30) => {
+    const words = text.split(' ');
+    let currentText = '';
+    
+    for (let i = 0; i < words.length; i++) {
+      currentText += (i > 0 ? ' ' : '') + words[i];
+      
+      setMessages(prev => prev.map(msg => 
+        msg.id === messageId 
+          ? { ...msg, streamedContent: currentText }
+          : msg
+      ));
+      
+      // Variable delay for more natural typing
+      const wordDelay = delay + Math.random() * 20;
+      await new Promise(resolve => setTimeout(resolve, wordDelay));
+    }
+    
+    // Mark streaming as complete
+    setMessages(prev => prev.map(msg => 
+      msg.id === messageId 
+        ? { ...msg, isStreaming: false, content: text, streamedContent: undefined }
+        : msg
+    ));
+    
+    setStreamingMessageId(null);
+  };
+
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
 
@@ -262,77 +452,87 @@ export function AgenticChatInterface({ className, sessionId }: AgenticChatProps)
 
     try {
       // Simulate AI processing
-      await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+      await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 1200));
 
-      // Get AI analysis (now uses ingested data search internally)
-      const analysis = await agenticAI.analyzeQuery(userMessage.content);
-      
-      // Check ingested data availability first
-      const dataStats = await ingestedGitHubSearchService.getIngestedDataStats();
-      console.log('Ingested data stats:', dataStats);
-      
-      // Search for related issues in ingested data only
-      const issues = await ingestedGitHubSearchService.searchIngestedData(userMessage.content, {
-        limit: 10,
-        minRelevance: 0.3,
-        includeBody: true,
-        includePullRequests: true,
-        includeDiscussions: true
-      });
-      
-      console.log('Search query:', userMessage.content);
-      console.log('Search results from ingested data:', issues);
-      
-      setRelatedIssues(issues);
-
-      // Use the same ingested data results for enhanced issues
-      const enhancedResults = issues.map(issue => ({
-        issue: issue,
-        title: issue.title,
-        relevanceScore: issue.relevance_score,
-        matchType: issue.match_type === 'combined' ? 'comments' : issue.match_type as 'body' | 'title' | 'labels' | 'comments',
-        matchedText: issue.title,
-        repository: issue.repository || 'unknown'
-      }));
-      
-      console.log('Ingested data search results:', {
-        query: userMessage.content,
-        issuesFound: issues.length,
-        enhancedResultsCount: enhancedResults.length
-      });
-
-      const assistantMessage: Message = {
-        id: generateUUID(),
-        content: analysis.response,
+      // Create streaming AI message
+      const aiMessageId = generateUUID();
+      const aiMessage: Message = {
+        id: aiMessageId,
+        content: '',
         sender: 'assistant',
         timestamp: new Date(),
-        type: analysis.type,
-        metadata: {
-          analysis,
-          relatedIssues: issues,
-          enhancedIssues: enhancedResults,
-          confidence: analysis.confidence,
-          followUpQuestions: analysis.followUpQuestions
-        }
+        type: 'ai_response',
+        isStreaming: true,
+        streamedContent: ''
       };
 
-      setMessages(prev => [...prev, assistantMessage]);
+      setMessages(prev => [...prev, aiMessage]);
+      setStreamingMessageId(aiMessageId);
+      setIsTyping(false);
+
+      // Get AI response with matches structure
+      const aiResponse = await simulateAIResponse(userMessage.content);
       
-      // Save assistant message to database
-      await saveMessageToHistory(assistantMessage);
+      console.log('AI Response:', aiResponse);
+      
+      // Update the message with AI response data (no summary text)
+      setMessages(prev => prev.map(msg => 
+        msg.id === aiMessageId 
+          ? { 
+              ...msg, 
+              type: 'ai_response',
+              aiResponse: aiResponse,
+              content: '', // No summary text
+              isStreaming: false
+            }
+          : msg
+      ));
+      
+      // Save the final message to database (no summary text)
+      const finalMessage: Message = {
+        id: aiMessageId,
+        content: '',
+        sender: 'assistant',
+        timestamp: new Date(),
+        type: 'ai_response',
+        aiResponse: aiResponse
+      };
+      
+      await saveMessageToHistory(finalMessage);
     } catch (error) {
       console.error('Error processing message:', error);
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: "I apologize, but I encountered an error processing your request. Please try again.",
-        sender: 'assistant',
-        timestamp: new Date(),
-        type: 'text'
-      };
-      setMessages(prev => [...prev, errorMessage]);
+      
+      // If we have a streaming message, update it with error content
+      if (streamingMessageId) {
+        setMessages(prev => prev.map(msg => 
+          msg.id === streamingMessageId 
+            ? { 
+                ...msg, 
+                content: "I apologize, but I encountered an error while processing your request. Please try again.",
+                isStreaming: false,
+                streamedContent: undefined
+              }
+            : msg
+        ));
+        setStreamingMessageId(null);
+      } else {
+        // Create new error message if no streaming message exists
+        const errorMessage: Message = {
+          id: generateUUID(),
+          content: "I apologize, but I encountered an error while processing your request. Please try again.",
+          sender: 'assistant',
+          timestamp: new Date(),
+          type: 'text'
+        };
+        setMessages(prev => [...prev, errorMessage]);
+        
+        // Save error message to database
+        await saveMessageToHistory(errorMessage);
+      }
     } finally {
       setIsLoading(false);
       setIsTyping(false);
+      setStreamingMessageId(null);
     }
   };
   
@@ -378,15 +578,172 @@ export function AgenticChatInterface({ className, sessionId }: AgenticChatProps)
     }));
   };
 
-  // Filter issues based on search query
-  const filteredIssues = relatedIssues.filter(issue =>
-    issue.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    issue.body?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Function to convert GitHub API URL to web URL
+  const convertApiUrlToWebUrl = (apiUrl: string | null): string | null => {
+    if (!apiUrl) return null;
+    
+    // Convert API URL to web URL
+    // From: https://api.github.com/repos/owner/repo/issues/123
+    // To: https://github.com/owner/repo/issues/123
+    const apiUrlPattern = /^https:\/\/api\.github\.com\/repos\/(.+)$/;
+    const match = apiUrl.match(apiUrlPattern);
+    
+    if (match) {
+      return `https://github.com/${match[1]}`;
+    }
+    
+    // If it's already a web URL or doesn't match the pattern, return as is
+    return apiUrl;
+  };
+
+  // Function to extract ticket number from URL
+  const extractTicketNumber = (url: string | null): string | null => {
+    if (!url) return null;
+    
+    // Extract issue/PR number from GitHub URL
+    // From: https://api.github.com/repos/SuiteCRM/SuiteCRM/issues/10693
+    // Extract: #10693
+    const issuePattern = /\/issues\/(\d+)$/;
+    const prPattern = /\/pull\/(\d+)$/;
+    
+    const issueMatch = url.match(issuePattern);
+    if (issueMatch) {
+      return `#${issueMatch[1]}`;
+    }
+    
+    const prMatch = url.match(prPattern);
+    if (prMatch) {
+      return `#${prMatch[1]}`;
+    }
+    
+    return null;
+  };
+
+  // Component to render AI response matches (title-only with individual summarize buttons)
+  const renderAIResponseMatches = (matches: AIResponseMatch[]) => {
+    return (
+      <div className="mt-4 space-y-2">
+        {matches.map((match, index) => {
+          const matchKey = `${match.title}-${index}`;
+          const expandedState = expandedSummaries[matchKey];
+          const webUrl = convertApiUrlToWebUrl(match.url);
+          const ticketNumber = extractTicketNumber(match.url);
+          const createdDate = new Date(match.created);
+          const formattedDate = createdDate.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+          });
+          
+          return (
+            <Card key={index} className="border border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-600 transition-colors">
+              {/* Enhanced Info Row */}
+              <div className="p-3">
+                {/* Top row: Ticket number, score, and actions */}
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    {ticketNumber && (
+                      <Badge variant="secondary" className="text-xs px-2 py-1 font-mono">
+                        {ticketNumber}
+                      </Badge>
+                    )}
+                    <Badge variant="outline" className="text-xs px-2 py-1">
+                      {match.score.toFixed(3)}
+                    </Badge>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-xs bg-gradient-to-r from-purple-500 to-blue-600 text-white hover:from-purple-600 hover:to-blue-700 transition-all duration-200"
+                      onClick={() => handleMatchSummarize(match, index)}
+                      disabled={expandedState?.isStreaming}
+                    >
+                      <Sparkles className="h-3 w-3 mr-1" />
+                      {expandedState?.isStreaming ? 'Loading...' : expandedState?.isExpanded ? 'Hide' : 'Summarize'}
+                    </Button>
+                    
+                    {webUrl && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 text-slate-400 hover:text-blue-600"
+                        onClick={() => window.open(webUrl, '_blank')}
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Title */}
+                <h4 className="font-medium text-slate-900 dark:text-slate-100 text-sm leading-tight mb-2">
+                  {match.title}
+                </h4>
+                
+                {/* Bottom row: User and date */}
+                <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
+                  <span className="flex items-center gap-1">
+                    <User className="h-3 w-3" />
+                    {match.user}
+                  </span>
+                  <span>{formattedDate}</span>
+                </div>
+              </div>
+              
+              {/* Expandable Summary Area */}
+              {expandedState?.isExpanded && (
+                <div className="px-3 pb-3 border-t border-slate-100 dark:border-slate-700">
+                  <div className="mt-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                    {expandedState.isStreaming ? (
+                      <div className="prose prose-sm max-w-none dark:prose-invert">
+                        <div className="whitespace-pre-wrap text-sm text-slate-700 dark:text-slate-300">
+                          {expandedState.streamedContent}
+                          <span className="inline-block w-0.5 h-4 bg-blue-500 ml-1 animate-pulse rounded-sm" />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="prose prose-sm max-w-none dark:prose-invert">
+                        <div className="whitespace-pre-wrap text-sm text-slate-700 dark:text-slate-300">
+                          {expandedState.summary}
+                        </div>
+                        <div className="flex items-center gap-2 mt-4 pt-3 border-t border-slate-200 dark:border-slate-600">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 text-xs px-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                            onClick={() => copyToClipboard(expandedState.summary)}
+                          >
+                            <Copy className="h-3 w-3 mr-1" />
+                            Copy Summary
+                          </Button>
+                          {webUrl && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 text-xs px-2 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                              onClick={() => window.open(webUrl, '_blank')}
+                            >
+                              <ExternalLink className="h-3 w-3 mr-1" />
+                              View Issue
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </Card>
+          );
+        })}
+      </div>
+    );
+  };
 
   const renderMessage = (message: Message, index: number) => {
     const isUser = message.sender === 'user';
-    const reaction = messageReactions[message.id];
     
     return (
       <div key={message.id} className={`group flex ${isUser ? 'justify-end' : 'justify-start'} mb-8`}>
@@ -448,9 +805,31 @@ export function AgenticChatInterface({ className, sessionId }: AgenticChatProps)
                     }}
                   />
                 ) : (
-                  <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                  <div className="whitespace-pre-wrap break-words">
+                    {message.isStreaming ? (
+                      <div className="flex items-end">
+                        <span>{message.streamedContent}</span>
+                        <span className="inline-block w-0.5 h-4 bg-blue-500 ml-1 animate-pulse rounded-sm" />
+                      </div>
+                    ) : (
+                      <span>{message.content}</span>
+                    )}
+                  </div>
                 )}
               </div>
+
+              {/* AI Response Matches - Display when message type is ai_response */}
+              {message.type === 'ai_response' && message.aiResponse && message.aiResponse.matches && (
+                <div className="mt-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Sparkles className="h-4 w-4 text-blue-500" />
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                      Relevant Matches ({message.aiResponse.matches.length})
+                    </span>
+                  </div>
+                  {renderAIResponseMatches(message.aiResponse.matches)}
+                </div>
+              )}
 
               {/* Similar Issues Display - Only show for the latest AI message */}
               {!isUser && relatedIssues && relatedIssues.length > 0 && index === messages.length - 1 && (
@@ -514,111 +893,21 @@ export function AgenticChatInterface({ className, sessionId }: AgenticChatProps)
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleMessageReaction(message.id, 'up')}
-                    className={`h-7 w-7 p-0 ${reaction === 'up' ? 'text-green-600 bg-green-50 dark:bg-green-900/20' : ''}`}
+                    onClick={() => copyToClipboard(message.content)}
+                    className="h-7 w-7 p-0 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
                   >
-                    <ThumbsUp className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleMessageReaction(message.id, 'down')}
-                    className={`h-7 w-7 p-0 ${reaction === 'down' ? 'text-red-600 bg-red-50 dark:bg-red-900/20' : ''}`}
-                  >
-                    <ThumbsDown className="h-3 w-3" />
+                    <Copy className="h-3 w-3" />
                   </Button>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        </div>  
       </div>
     );
   };
 
   const renderSideDrawerContent = () => {
-    if (sideDrawerContent === 'issues') {
-      return (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">Similar Issues ({filteredIssues.length})</h3>
-          </div>
-          
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search issues..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-
-          <ScrollArea className="h-[400px]">
-            <div className="space-y-3">
-              {filteredIssues.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">
-                  {searchQuery ? 'No issues match your search.' : 'No related issues found.'}
-                </p>
-              ) : (
-                filteredIssues.map((issue) => (
-                  <Card key={issue.id} className="p-3 hover:shadow-md transition-shadow cursor-pointer">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-sm line-clamp-2 mb-1">{issue.title}</h4>
-                        <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
-                          {issue.body?.substring(0, 100)}...
-                        </p>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span>#{issue.number}</span>
-                          <span>•</span>
-                          <span>{issue.state}</span>
-                          <span>•</span>
-                          <span>{formatIssueDate(issue.created_at)}</span>
-                        </div>
-                      </div>
-                      <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    </div>
-                  </Card>
-                ))
-              )}
-            </div>
-          </ScrollArea>
-        </div>
-      );
-    }
-
-    if (sideDrawerContent === 'knowledge') {
-      return (
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Knowledge Graph ({knowledgeNodes.length})</h3>
-          <ScrollArea className="h-[400px]">
-            <div className="space-y-3">
-              {knowledgeNodes.map((node) => (
-                <Card key={node.id} className="p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className={`w-2 h-2 rounded-full ${
-                      node.type === 'concept' ? 'bg-blue-500' :
-                      node.type === 'issue' ? 'bg-red-500' :
-                      node.type === 'solution' ? 'bg-green-500' : 'bg-purple-500'
-                    }`} />
-                    <span className="font-medium text-sm">{node.label}</span>
-                  </div>
-                  {node.description && (
-                    <p className="text-xs text-muted-foreground mb-2">{node.description}</p>
-                  )}
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Network className="h-3 w-3" />
-                    <span>{node.connections.length} connections</span>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </ScrollArea>
-        </div>
-      );
-    }
-
     return null;
   };
 
@@ -633,46 +922,54 @@ export function AgenticChatInterface({ className, sessionId }: AgenticChatProps)
               <div className="max-w-4xl mx-auto">
                 {messages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center text-center min-h-[65vh]">
-                    <div className="relative mb-10 group">
-                      <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 dark:from-slate-100 dark:via-slate-200 dark:to-slate-300 flex items-center justify-center shadow-2xl ring-1 ring-slate-900/10 dark:ring-slate-100/10 transition-all duration-500 group-hover:shadow-3xl group-hover:scale-105">
-                        <Bot className="h-9 w-9 text-white dark:text-slate-900" />
-                      </div>
-                      <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-emerald-500 rounded-full border-3 border-white dark:border-slate-950 shadow-lg flex items-center justify-center">
-                        <Sparkles className="h-3 w-3 text-white animate-pulse" />
-                      </div>
+                    {/* Beautiful InfinityKB.AI Hero Logo */}
+                    <div className="mb-12">
+                      <InfinityKBLogoHero className="mb-8" />
                     </div>
                     
-                    <div className="space-y-4 mb-12">
-                      <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-900 via-slate-700 to-slate-900 dark:from-slate-100 dark:via-slate-300 dark:to-slate-100 bg-clip-text text-transparent">
-                        AI Assistant
-                      </h1>
-                      <p className="text-xl text-slate-600 dark:text-slate-400 max-w-2xl leading-relaxed">
-                        Your intelligent coding companion. Ask questions, get solutions, and explore your codebase with AI-powered insights.
-                      </p>
+                    {/* Enhanced Feature Cards with Glassmorphism */}
+                    <div className="mb-8">
+                      <div className="flex items-center justify-center gap-2 mb-6">
+                        <div className="w-12 h-0.5 bg-gradient-to-r from-transparent via-blue-500 to-transparent"></div>
+                        <span className="text-sm font-medium text-slate-500 dark:text-slate-400 tracking-wider uppercase">Powered by AI</span>
+                        <div className="w-12 h-0.5 bg-gradient-to-r from-transparent via-purple-500 to-transparent"></div>
+                      </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-2xl">
-                      <Card className="p-6 hover:shadow-lg transition-all duration-300 cursor-pointer border-slate-200/50 dark:border-slate-800/50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                            <Bug className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-4xl">
+                      <Card className="group p-6 hover:shadow-2xl hover:shadow-blue-500/10 transition-all duration-500 cursor-pointer border-slate-200/30 dark:border-slate-700/30 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl hover:bg-white/80 dark:hover:bg-slate-900/80 hover:scale-105">
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg group-hover:shadow-blue-500/25 transition-all duration-300">
+                            <Bug className="h-6 w-6 text-white" />
                           </div>
-                          <h3 className="font-semibold text-slate-900 dark:text-slate-100">Debug Issues</h3>
+                          <h3 className="font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">Debug & Analyze</h3>
                         </div>
-                        <p className="text-sm text-slate-600 dark:text-slate-400">
-                          Get help with debugging, error analysis, and code troubleshooting.
+                        <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                          Intelligent debugging with AI-powered error analysis and instant troubleshooting solutions.
                         </p>
                       </Card>
 
-                      <Card className="p-6 hover:shadow-lg transition-all duration-300 cursor-pointer border-slate-200/50 dark:border-slate-800/50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                            <Lightbulb className="h-5 w-5 text-green-600 dark:text-green-400" />
+                      <Card className="group p-6 hover:shadow-2xl hover:shadow-purple-500/10 transition-all duration-500 cursor-pointer border-slate-200/30 dark:border-slate-700/30 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl hover:bg-white/80 dark:hover:bg-slate-900/80 hover:scale-105">
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg group-hover:shadow-purple-500/25 transition-all duration-300">
+                            <Lightbulb className="h-6 w-6 text-white" />
                           </div>
-                          <h3 className="font-semibold text-slate-900 dark:text-slate-100">Code Solutions</h3>
+                          <h3 className="font-bold text-slate-900 dark:text-slate-100 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">Smart Solutions</h3>
                         </div>
-                        <p className="text-sm text-slate-600 dark:text-slate-400">
-                          Discover optimal solutions and best practices for your coding challenges.
+                        <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                          Discover optimal code patterns, best practices, and innovative solutions for complex challenges.
+                        </p>
+                      </Card>
+
+                      <Card className="group p-6 hover:shadow-2xl hover:shadow-emerald-500/10 transition-all duration-500 cursor-pointer border-slate-200/30 dark:border-slate-700/30 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl hover:bg-white/80 dark:hover:bg-slate-900/80 hover:scale-105 md:col-span-2 lg:col-span-1">
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg group-hover:shadow-emerald-500/25 transition-all duration-300">
+                            <Search className="h-6 w-6 text-white" />
+                          </div>
+                          <h3 className="font-bold text-slate-900 dark:text-slate-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">Knowledge Search</h3>
+                        </div>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                          Explore infinite knowledge with intelligent search across your codebase and documentation.
                         </p>
                       </Card>
                     </div>

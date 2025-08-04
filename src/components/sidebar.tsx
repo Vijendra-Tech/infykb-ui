@@ -15,15 +15,10 @@ import {
   BarChart,
   UserCheck,
   Search,
-  History,
-  Edit,
   Settings,
-  LogOut,
-  LayoutDashboard,
-  Globe,
-  Building,
   Palette,
-  ChevronUp
+  ChevronUp,
+  LogOut
 } from 'lucide-react';
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -39,7 +34,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-import { Logo } from "@/components/ui/logo";
+import { InfinityKBLogoCompact } from "@/components/ui/infinity-kb-logo";
 
 
 import {
@@ -55,41 +50,75 @@ interface SidebarItemProps {
   badge?: string;
   href?: string;
   onClick?: () => void;
+  disabled?: boolean;
+  disabledTooltip?: string;
 }
 
-const SidebarItem = ({ icon, label, active, badge, href = "#", onClick }: SidebarItemProps) => {
+const SidebarItem = ({ icon, label, active, badge, href = "#", onClick, disabled = false, disabledTooltip }: SidebarItemProps) => {
   const { collapsed } = useSidebar();
   
   if (!collapsed) {
     const className = `group flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors duration-150 ease-out relative ${
-      active 
+      disabled
+        ? "text-slate-400 dark:text-slate-500 cursor-not-allowed opacity-60"
+        : active 
         ? "bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 shadow-sm border border-slate-300 dark:border-slate-600" 
-        : "hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100"
+        : "hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 cursor-pointer"
     }`;
     
     const content = (
       <>
         <div className={`${
-          active ? "text-slate-700 dark:text-slate-300" : "text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-300"
+          disabled 
+            ? "text-slate-400 dark:text-slate-500"
+            : active ? "text-slate-700 dark:text-slate-300" : "text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-300"
         }`}>
           {icon}
         </div>
         <span className={`text-sm font-medium ${
-          active ? "text-slate-800 dark:text-slate-200" : "text-slate-600 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-slate-100"
+          disabled
+            ? "text-slate-400 dark:text-slate-500"
+            : active ? "text-slate-800 dark:text-slate-200" : "text-slate-600 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-slate-100"
         }`}>
           {label}
         </span>
           {badge && (
-            <span className="relative z-10 ml-auto text-xs px-1.5 py-0.5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-medium">
+            <span className={`relative z-10 ml-auto text-xs px-1.5 py-0.5 rounded-full font-medium ${
+              disabled 
+                ? "bg-slate-300 dark:bg-slate-600 text-slate-500 dark:text-slate-400"
+                : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
+            }`}>
               {badge}
             </span>
           )}
       </>
     );
     
+    if (disabled) {
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className={className}>
+              {content}
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="right" className="bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900 border-slate-700 dark:border-slate-300 shadow-lg">
+            {disabledTooltip || "Coming Soon"}
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
+    
     if (onClick) {
       return (
-        <button onClick={onClick} className={className}>
+        <button 
+          onClick={(e) => {
+            e.preventDefault();
+            onClick();
+          }} 
+          className={className}
+          type="button"
+        >
           {content}
         </button>
       );
@@ -103,18 +132,24 @@ const SidebarItem = ({ icon, label, active, badge, href = "#", onClick }: Sideba
   }
 
   const className = `group flex items-center justify-center w-10 h-10 rounded-md transition-colors duration-150 ease-out relative ${
-    active
+    disabled
+      ? "text-slate-400 dark:text-slate-500 cursor-not-allowed opacity-60"
+      : active
       ? "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 shadow-sm border border-slate-300 dark:border-slate-600" 
-      : "hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
+      : "hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer"
   }`;
   
   const content = (
     <>
-      <div>
+      <div className={disabled ? "text-slate-400 dark:text-slate-500" : ""}>
         {icon}
       </div>
       {badge && (
-        <span className="absolute -top-1 -right-1 text-xs px-1.5 py-0.5 rounded-full bg-slate-600 dark:bg-slate-400 text-white dark:text-slate-900 font-medium">
+        <span className={`absolute -top-1 -right-1 text-xs px-1.5 py-0.5 rounded-full font-medium ${
+          disabled 
+            ? "bg-slate-400 dark:bg-slate-500 text-slate-300 dark:text-slate-400"
+            : "bg-slate-600 dark:bg-slate-400 text-white dark:text-slate-900"
+        }`}>
           {badge}
         </span>
       )}
@@ -124,8 +159,19 @@ const SidebarItem = ({ icon, label, active, badge, href = "#", onClick }: Sideba
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        {onClick ? (
-          <button onClick={onClick} className={className}>
+        {disabled ? (
+          <div className={className}>
+            {content}
+          </div>
+        ) : onClick ? (
+          <button 
+            onClick={(e) => {
+              e.preventDefault();
+              onClick();
+            }} 
+            className={className}
+            type="button"
+          >
             {content}
           </button>
         ) : (
@@ -135,7 +181,7 @@ const SidebarItem = ({ icon, label, active, badge, href = "#", onClick }: Sideba
         )}
       </TooltipTrigger>
       <TooltipContent side="right" className="bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900 border-slate-700 dark:border-slate-300 shadow-lg">
-        {label}
+        {disabled ? (disabledTooltip || "Coming Soon") : label}
       </TooltipContent>
     </Tooltip>
   );
@@ -188,7 +234,20 @@ export const Sidebar = () => {
   const { chats, addChat } = useChatHistoryStore();
   const pathname = usePathname();
   const router = useRouter();
-  const [isChatHistoryOpen, setIsChatHistoryOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isCollapsedUserMenuOpen, setIsCollapsedUserMenuOpen] = useState(false);
+
+  // Custom logout handler that navigates to login page
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push('/auth/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Navigate to login even if logout fails
+      router.push('/auth/login');
+    }
+  };
 
   return (
     <div
@@ -201,29 +260,32 @@ export const Sidebar = () => {
         <div className="absolute inset-0 bg-slate-100/30 dark:bg-slate-800/30" />
         
         <div className="relative z-10">
-          <Logo size="md" variant="sidebar" animated={false} />
+          <InfinityKBLogoCompact size="md" />
         </div>
 
         {!collapsed && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={() => setCollapsed(true)}
-                className="relative z-10 p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-              >
-                <X className="h-4 w-4 text-slate-600 dark:text-slate-400" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="right" className="bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900 border-slate-700 dark:border-slate-300 shadow-lg">
-              Collapse sidebar
-            </TooltipContent>
-          </Tooltip>
+          <button
+            onClick={() => {
+              console.log('Collapse button clicked');
+              setCollapsed(true);
+            }}
+            className="relative z-20 p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+            title="Collapse sidebar"
+            type="button"
+          >
+            <X className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+          </button>
         )}
 
         {collapsed && (
           <button
-            onClick={() => setCollapsed(false)}
-            className="absolute top-1/2 -translate-y-1/2 right-2 p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors z-10"
+            onClick={() => {
+              console.log('Expand button clicked');
+              setCollapsed(false);
+            }}
+            className="absolute top-1/2 -translate-y-1/2 right-2 p-2 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors z-20 cursor-pointer"
+            title="Expand sidebar"
+            type="button"
           >
             <Menu className="h-4 w-4 text-slate-600 dark:text-slate-400" />
           </button>
@@ -252,9 +314,11 @@ export const Sidebar = () => {
             <SidebarItem
               icon={<Clock className="h-5 w-5" />}
               label="Chat History"
-              active={pathname === "/chat-history"}
-              href="/chat-history"
-              badge={chats.length.toString()}
+              active={false}
+              href="#"
+              badge={chats.length > 0 ? chats.length.toString() : undefined}
+              disabled={true}
+              disabledTooltip="Coming Soon"
             />
           </SidebarSection>
         )}
@@ -265,8 +329,10 @@ export const Sidebar = () => {
             <SidebarItem
               icon={<Search className="h-5 w-5" />}
               label="Issue Search"
-              active={pathname === "/issues"}
-              href="/issues"
+              active={false}
+              href="#"
+              disabled={true}
+              disabledTooltip="Coming Soon"
             />
           </SidebarSection>
         )}
@@ -299,14 +365,18 @@ export const Sidebar = () => {
             <SidebarItem
               icon={<Users className="h-5 w-5" />}
               label="Organization"
-              active={pathname === "/organization"}
-              href="/organization"
+              active={false}
+              href="#"
+              disabled={true}
+              disabledTooltip="Coming Soon"
             />
             <SidebarItem
               icon={<UserCheck className="h-5 w-5" />}
               label="Requests"
-              active={pathname === "/requests"}
-              href="/requests"
+              active={false}
+              href="#"
+              disabled={true}
+              disabledTooltip="Coming Soon"
             />
           </SidebarSection>
         )}
@@ -330,13 +400,17 @@ export const Sidebar = () => {
             <SidebarItem
               icon={<Search className="h-5 w-5" />}
               label="Issue Search"
-              active={pathname === "/issues"}
-              href="/issues"
+              active={false}
+              href="#"
+              disabled={true}
+              disabledTooltip="Coming Soon"
             />
             <SidebarItem
               icon={<Clock className="h-5 w-5" />}
               label="Chat History"
-              badge={chats.length.toString()}
+              badge={chats.length > 0 ? chats.length.toString() : undefined}
+              disabled={true}
+              disabledTooltip="Coming Soon"
             />
             {isMember() && (
               <>
@@ -365,14 +439,18 @@ export const Sidebar = () => {
                 <SidebarItem
                   icon={<Users className="h-5 w-5" />}
                   label="Organization"
-                  active={pathname === "/organization"}
-                  href="/organization"
+                  active={false}
+                  href="#"
+                  disabled={true}
+                  disabledTooltip="Coming Soon"
                 />
                 <SidebarItem
                   icon={<UserCheck className="h-5 w-5" />}
                   label="Requests"
-                  active={pathname === "/requests"}
-                  href="/requests"
+                  active={false}
+                  href="#"
+                  disabled={true}
+                  disabledTooltip="Coming Soon"
                 />
               </>
             )}
@@ -393,9 +471,15 @@ export const Sidebar = () => {
         <div className="mt-auto border-t border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50">
           {!collapsed ? (
             /* Expanded User Menu */
-            <DropdownMenu>
+            <DropdownMenu open={isUserMenuOpen} onOpenChange={setIsUserMenuOpen}>
               <DropdownMenuTrigger asChild>
-                <button className="w-full p-4 flex items-center gap-3 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group">
+                <button 
+                  className="w-full p-4 flex items-center gap-3 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group"
+                  onClick={() => {
+                    console.log('User menu button clicked, current state:', isUserMenuOpen);
+                    setIsUserMenuOpen(!isUserMenuOpen);
+                  }}
+                >
                   <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
                     {user?.name?.charAt(0).toUpperCase() || 'U'}
                   </div>
@@ -407,63 +491,43 @@ export const Sidebar = () => {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent side="top" align="start" className="w-56 mb-2 ml-4">
-                <DropdownMenuItem onClick={() => setIsChatHistoryOpen(!isChatHistoryOpen)}>
-                  <History className="h-4 w-4 mr-2" />
-                  Chat History
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => {
-                  addChat({ title: "New Chat" });
-                  router.push("/chat");
-                }}>
-                  <Edit className="h-4 w-4 mr-2" />
-                  New Chat
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => router.push('/dashboard')}>
-                  <LayoutDashboard className="h-4 w-4 mr-2" />
-                  Dashboard
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => window.open('https://example.com', '_blank')}>
-                  <Globe className="h-4 w-4 mr-2" />
-                  Website
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => router.push('/create-organization')}>
-                  <Building className="h-4 w-4 mr-2" />
-                  Create Organization
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <Palette className="h-4 w-4 mr-2" />
-                  Theme
-                  <div className="ml-auto">
+                <div className="p-2 space-y-2">
+                  <div className="flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                    <div className="flex items-center">
+                      <Palette className="h-4 w-4 mr-2 text-slate-600 dark:text-slate-400" />
+                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Theme</span>
+                    </div>
                     <ModeToggle />
                   </div>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Settings className="h-4 w-4 mr-2" />
-                  Animation
-                  <div className="ml-auto">
+                  <div className="flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                    <div className="flex items-center">
+                      <Settings className="h-4 w-4 mr-2 text-slate-600 dark:text-slate-400" />
+                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Animation</span>
+                    </div>
                     <AnimationToggle />
                   </div>
-                </DropdownMenuItem>
+                </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
-                  onClick={() => {
-                    logout();
-                    router.push('/auth/login');
-                  }}
-                  className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950"
+                  onClick={handleLogout}
+                  className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer"
                 >
                   <LogOut className="h-4 w-4 mr-2" />
-                  Log out
+                  <span>Logout</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
             /* Collapsed User Menu */
-            <DropdownMenu>
+            <DropdownMenu open={isCollapsedUserMenuOpen} onOpenChange={setIsCollapsedUserMenuOpen}>
               <DropdownMenuTrigger asChild>
-                <button className="w-full p-2 flex justify-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                <button 
+                  className="w-full p-2 flex justify-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  onClick={() => {
+                    console.log('Collapsed user menu button clicked, current state:', isCollapsedUserMenuOpen);
+                    setIsCollapsedUserMenuOpen(!isCollapsedUserMenuOpen);
+                  }}
+                >
                   <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
                     {user?.name?.charAt(0).toUpperCase() || 'U'}
                   </div>
@@ -477,67 +541,35 @@ export const Sidebar = () => {
                   {user?.role?.replace('_', ' ')}
                 </div>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => setIsChatHistoryOpen(!isChatHistoryOpen)}>
-                  <History className="h-4 w-4 mr-2" />
-                  Chat History
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => {
-                  addChat({ title: "New Chat" });
-                  router.push("/chat");
-                }}>
-                  <Edit className="h-4 w-4 mr-2" />
-                  New Chat
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => router.push('/dashboard')}>
-                  <LayoutDashboard className="h-4 w-4 mr-2" />
-                  Dashboard
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => window.open('https://example.com', '_blank')}>
-                  <Globe className="h-4 w-4 mr-2" />
-                  Website
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => router.push('/create-organization')}>
-                  <Building className="h-4 w-4 mr-2" />
-                  Create Organization
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <Palette className="h-4 w-4 mr-2" />
-                  Theme
-                  <div className="ml-auto">
+                <div className="p-2 space-y-2">
+                  <div className="flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                    <div className="flex items-center">
+                      <Palette className="h-4 w-4 mr-2 text-slate-600 dark:text-slate-400" />
+                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Theme</span>
+                    </div>
                     <ModeToggle />
                   </div>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Settings className="h-4 w-4 mr-2" />
-                  Animation
-                  <div className="ml-auto">
+                  <div className="flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                    <div className="flex items-center">
+                      <Settings className="h-4 w-4 mr-2 text-slate-600 dark:text-slate-400" />
+                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Animation</span>
+                    </div>
                     <AnimationToggle />
                   </div>
-                </DropdownMenuItem>
+                </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
-                  onClick={() => {
-                    logout();
-                    router.push('/auth/login');
-                  }}
-                  className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950"
+                  onClick={handleLogout}
+                  className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer"
                 >
                   <LogOut className="h-4 w-4 mr-2" />
-                  Log out
+                  <span>Logout</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           )}
         </div>
       )}
-      
-      {/* Chat History Modal */}
-      <ChatHistory 
-        isOpen={isChatHistoryOpen} 
-        onClose={() => setIsChatHistoryOpen(false)} 
-      />
     </div>
   );
 }

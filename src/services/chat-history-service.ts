@@ -20,7 +20,7 @@ export interface CreateChatMessageData {
   sessionId: string;
   content: string;
   sender: 'user' | 'assistant';
-  type?: 'text' | 'code' | 'analysis' | 'error';
+  type?: 'text' | 'code' | 'analysis' | 'error' | 'ai_response';
   metadata?: {
     analysis?: any;
     suggestions?: any[];

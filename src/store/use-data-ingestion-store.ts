@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type IngestionSourceType = 'File Upload' | 'API Endpoint' | 'Database' | 'JIRA' | 'Confluence' | 'ADO' | 'GitHub';
+export type IngestionSourceType = 'File Upload' | 'API Endpoint' | 'Database' | 'JIRA' | 'Salesforce' | 'GitHub';
 
 export type IngestionStatus = 'Ready' | 'Processing' | 'Completed' | 'Failed';
 
@@ -16,6 +16,7 @@ export interface IngestionSource {
   url?: string;
   username?: string;
   password?: string;
+  description?: string;
   lastIngested?: string; // ISO date string if ingested, undefined if never ingested
   // New tracking fields
   ingestStats?: {
