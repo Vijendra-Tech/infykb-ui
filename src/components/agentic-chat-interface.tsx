@@ -60,6 +60,7 @@ import { ingestedGitHubSearchService } from "@/services/ingested-github-search-s
 import { ChatMessage } from "@/lib/database";
 import { generateUUID } from "@/lib/utils";
 import { InfinityKBLogoHero } from "./ui/infinity-kb-logo";
+import { buildApiUrl, API_ENDPOINTS } from "@/lib/api-config";
 
 
 // AI Response Match structure
@@ -166,7 +167,7 @@ export function AgenticChatInterface({
 
     // await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
 
-    const res = await fetch("http://127.0.0.1:8000/api/search", {
+    const res = await fetch(buildApiUrl(API_ENDPOINTS.SEARCH), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -523,21 +524,26 @@ export function AgenticChatInterface({
   };
 
   const handleSendMessage = async () => {
-    if (!inputValue.trim() || isLoading) return;
+    // Validate input first - don't start loading 
+    if (!inputValue.trim()) {
+      toast({
+        title: "Empty message",
+        description: "Please enter a message before sending.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (isLoading) return;
 
     const userMessage: Message = {
       id: generateUUID(),
-      content: inputValue,
+      content: inputValue.trim(),
       sender: "user",
       timestamp: new Date(),
       type: "text",
     };
 
     setMessages((prev) => [...prev, userMessage]);
-
-    // Save user message to database
-    await saveMessageToHistory(userMessage);
-
     setInputValue("");
     setIsLoading(true);
     setIsTyping(true);
@@ -547,14 +553,19 @@ export function AgenticChatInterface({
       textareaRef.current.style.height = "auto";
     }
 
+    let aiMessageId: string | null = null;
+
     try {
+      // Save user message to database
+      await saveMessageToHistory(userMessage);
+
       // Simulate AI processing
       await new Promise((resolve) =>
         setTimeout(resolve, 800 + Math.random() * 1200)
       );
 
       // Create streaming AI message
-      const aiMessageId = generateUUID();
+      aiMessageId = generateUUID();
       const aiMessage: Message = {
         id: aiMessageId,
         content: "",
@@ -572,7 +583,7 @@ export function AgenticChatInterface({
       // Get AI response with matches structure
       const aiResponse = await simulateAIResponse(userMessage.content);
 
-      // Update the message with AI response data (no summary text)
+      // Update the message with AI response data
       setMessages((prev) =>
         prev.map((msg) =>
           msg.id === aiMessageId
@@ -580,14 +591,14 @@ export function AgenticChatInterface({
                 ...msg,
                 type: "ai_response",
                 aiResponse: aiResponse,
-                content: "", // No summary text
+                content: "",
                 isStreaming: false,
               }
             : msg
         )
       );
 
-      // Save the final message to database (no summary text)
+      // Save the final message to database
       const finalMessage: Message = {
         id: aiMessageId,
         content: "",
@@ -600,38 +611,64 @@ export function AgenticChatInterface({
       await saveMessageToHistory(finalMessage);
     } catch (error) {
       console.error("Error processing message:", error);
+      
+      const errorMessage = "I apologize, but I encountered an error while processing your request. Please try again.";
 
-      // If we have a streaming message, update it with error content
-      if (streamingMessageId) {
+      // If we have created an AI message, update it with error content
+      if (aiMessageId) {
         setMessages((prev) =>
           prev.map((msg) =>
-            msg.id === streamingMessageId
+            msg.id === aiMessageId
               ? {
                   ...msg,
-                  content:
-                    "I apologize, but I encountered an error while processing your request. Please try again.",
+                  content: errorMessage,
+                  type: "error" as const,
                   isStreaming: false,
                   streamedContent: undefined,
+                  aiResponse: undefined,
                 }
               : msg
           )
         );
-        setStreamingMessageId(null);
+        
+        // Save the updated error message to database
+        try {
+          const errorMsg: Message = {
+            id: aiMessageId,
+            content: errorMessage,
+            sender: "assistant",
+            timestamp: new Date(),
+            type: "error",
+          };
+          await saveMessageToHistory(errorMsg);
+        } catch (saveError) {
+          console.error("Failed to save error message:", saveError);
+        }
       } else {
-        // Create new error message if no streaming message exists
-        const errorMessage: Message = {
+        // Create new error message only if no AI message was created
+        const errorMsg: Message = {
           id: generateUUID(),
-          content:
-            "I apologize, but I encountered an error while processing your request. Please try again.",
+          content: errorMessage,
           sender: "assistant",
           timestamp: new Date(),
-          type: "text",
+          type: "error",
         };
-        setMessages((prev) => [...prev, errorMessage]);
+        setMessages((prev) => [...prev, errorMsg]);
 
         // Save error message to database
-        await saveMessageToHistory(errorMessage);
+        try {
+          await saveMessageToHistory(errorMsg);
+        } catch (saveError) {
+          console.error("Failed to save error message:", saveError);
+        }
       }
+      
+      // Show error toast
+      toast({
+        title: "Error",
+        description: "Failed to process your message. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
       setIsTyping(false);
@@ -656,31 +693,35 @@ export function AgenticChatInterface({
     }
   };
 
-  // const startNewChat = () => {
-  //   setMessages([]);
-  //   setCurrentChatId(null);
-  //   setInputValue("");
-  //   setRelatedIssues([]);
-  //   setMessageReactions({});
-  //   setSideDrawerOpen(false);
-  //   setSideDrawerContent(null);
-  //   setSearchQuery("");
+  const startNewChat = () => {
+    setMessages([]);
+    setCurrentChatId(null);
+    setInputValue("");
+    setRelatedIssues([]);
+    setMessageReactions({});
+    setSideDrawerOpen(false);
+    setSideDrawerContent(null);
+    setSearchQuery("");
+    setExpandedSummaries({});
+    setIsLoading(false);
+    setIsTyping(false);
+    setStreamingMessageId(null);
 
-  //   toast({
-  //     title: "New Chat Started",
-  //     description: "Previous conversation has been saved to history.",
-  //   });
-  // };
+    toast({
+      title: "New Chat Started",
+      description: "Previous conversation has been saved to history.",
+    });
+  };
 
-  // const handleMessageReaction = (
-  //   messageId: string,
-  //   reaction: "up" | "down"
-  // ) => {
-  //   setMessageReactions((prev) => ({
-  //     ...prev,
-  //     [messageId]: prev[messageId] === reaction ? null : reaction,
-  //   }));
-  // };
+  const handleMessageReaction = (
+    messageId: string,
+    reaction: "up" | "down"
+  ) => {
+    setMessageReactions((prev) => ({
+      ...prev,
+      [messageId]: prev[messageId] === reaction ? null : reaction,
+    }));
+  };
 
   // Function to convert GitHub API URL to web URL
   const convertApiUrlToWebUrl = (apiUrl: string | null): string | null => {
@@ -864,22 +905,16 @@ export function AgenticChatInterface({
     return (
       <div
         key={message.id}
-        className={`group flex ${
-          isUser ? "justify-end" : "justify-start"
-        } mb-8`}
+        className="group flex justify-start mb-8"
       >
-        <div
-          className={`flex items-start gap-4 max-w-[85%] ${
-            isUser ? "flex-row-reverse" : ""
-          }`}
-        >
+        <div className="flex items-start gap-4 max-w-[85%]">
           {/* Avatar */}
           <div className="relative flex-shrink-0">
             <div
               className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg ring-2 ring-white dark:ring-slate-900 ${
                 isUser
                   ? "bg-gradient-to-br from-blue-500 to-blue-600 text-white"
-                  : "bg-gradient-to-br from-slate-800 to-slate-900 dark:from-slate-200 dark:to-slate-300 text-white dark:text-slate-900"
+                  : "bg-gradient-to-br from-orange-500 to-red-500 text-white"
               }`}
             >
               {isUser ? (
@@ -889,14 +924,12 @@ export function AgenticChatInterface({
               )}
             </div>
             {!isUser && (
-              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-900 shadow-sm animate-pulse" />
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-orange-400 rounded-full border-2 border-white dark:border-slate-900 shadow-sm animate-pulse" />
             )}
           </div>
 
           {/* Message Content */}
-          <div
-            className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}
-          >
+          <div className="flex flex-col items-start w-full">
             {/* Message Header */}
             <div className="flex items-center gap-2 mb-2">
               <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
@@ -912,13 +945,8 @@ export function AgenticChatInterface({
               )}
             </div>
 
-            {/* Professional Message Bubble */}
-            <div
-              className={`relative rounded-2xl px-5 py-4 max-w-full shadow-sm ${
-                isUser
-                  ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white ml-16 rounded-br-md"
-                  : "bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-slate-200/60 dark:border-slate-700/60 mr-16 rounded-bl-md hover:shadow-md transition-shadow duration-200"
-              }`}
+            {/* Clean Message Content */}
+            <div className="relative w-full py-2"
             >
               {/* Message Content */}
               <div className="prose prose-sm max-w-none dark:prose-invert">
@@ -1015,44 +1043,63 @@ export function AgenticChatInterface({
                   </div>
                 )}
 
-              {/* Action Buttons */}
-              <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => copyToClipboard(message.content)}
-                    className="h-7 px-2 text-xs"
-                  >
-                    <Copy className="h-3 w-3 mr-1" />
-                    Copy
-                  </Button>
-                  {message.metadata?.relatedIssues &&
-                    message.metadata.relatedIssues.length > 0 && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openSideDrawer("issues")}
-                        className="h-7 px-2 text-xs"
-                      >
-                        <Bug className="h-3 w-3 mr-1" />
-                        {message.metadata.relatedIssues?.length || 0} Similar
-                        Issues
-                      </Button>
-                    )}
+              {/* Action Buttons - Only for bot messages */}
+              {!isUser && (
+                <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => copyToClipboard(message.content || 'No content to copy')}
+                      className="h-8 px-3 text-xs bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600"
+                    >
+                      <Copy className="h-3 w-3 mr-1" />
+                      Copy
+                    </Button>
+                    
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleMessageReaction(message.id, "up")}
+                      className={`h-8 px-3 text-xs ${
+                        messageReactions[message.id] === "up"
+                          ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+                          : "bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600"
+                      }`}
+                    >
+                      <ThumbsUp className="h-3 w-3 mr-1" />
+                      Like
+                    </Button>
+                    
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleMessageReaction(message.id, "down")}
+                      className={`h-8 px-3 text-xs ${
+                        messageReactions[message.id] === "down"
+                          ? "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
+                          : "bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600"
+                      }`}
+                    >
+                      <ThumbsDown className="h-3 w-3 mr-1" />
+                      Dislike
+                    </Button>
+                    
+                    {message.metadata?.relatedIssues &&
+                      message.metadata.relatedIssues.length > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openSideDrawer("issues")}
+                          className="h-8 px-3 text-xs bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600"
+                        >
+                          <Bug className="h-3 w-3 mr-1" />
+                          {message.metadata.relatedIssues?.length || 0} Similar Issues
+                        </Button>
+                      )}
+                  </div>
                 </div>
-
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => copyToClipboard(message.content)}
-                    className="h-7 w-7 p-0 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-                  >
-                    <Copy className="h-3 w-3" />
-                  </Button>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
@@ -1181,63 +1228,21 @@ export function AgenticChatInterface({
 
         {/* Professional Chat Input Area */}
         <div className="flex-shrink-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-200/50 dark:border-slate-800/50">
-          <div className="max-w-4xl mx-auto px-6 py-6">
-            {/* Quick Response Buttons */}
-            <div className="mb-6">
-              <div className="flex flex-wrap gap-2 justify-center">
-                <button
-                  onClick={() =>
-                    setInputValue(
-                      "Help me explore this ticket and understand the issue better"
-                    )
-                  }
-                  className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors"
+          <div className="max-w-4xl mx-auto px-6 py-4">
+            {/* New Chat Button - Only show when there are messages */}
+            {messages.length > 0 && (
+              <div className="mb-4 flex justify-center">
+                <Button
+                  onClick={startNewChat}
+                  variant="outline"
+                  size="sm"
+                  className="h-8 px-4 text-xs font-medium bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border-slate-200 dark:border-slate-700"
                 >
-                  <Search className="h-3 w-3" />
-                  Explore ticket
-                </button>
-                <button
-                  onClick={() =>
-                    setInputValue("Create a test scenario for this issue")
-                  }
-                  className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors"
-                >
-                  <Settings className="h-3 w-3" />
-                  Create scenario
-                </button>
-                <button
-                  onClick={() =>
-                    setInputValue(
-                      "Help me diagnose the trace and identify the root cause"
-                    )
-                  }
-                  className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors"
-                >
-                  <Target className="h-3 w-3" />
-                  Diagnose trace
-                </button>
-                <button
-                  onClick={() =>
-                    setInputValue(
-                      "Assess the infrastructure and suggest improvements"
-                    )
-                  }
-                  className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors"
-                >
-                  <Network className="h-3 w-3" />
-                  Assess infrastructure
-                </button>
-                <button
-                  onClick={() =>
-                    setInputValue("Review my code and suggest improvements")
-                  }
-                  className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors"
-                >
-                  <Code className="h-3 w-3" />
-                  Improve code
-                </button>
+                  <Plus className="h-3 w-3 mr-2" />
+                  New Chat
+                </Button>
               </div>
-            </div>
+            )}
 
             {/* Enhanced Chat Input */}
             <div className="relative">
@@ -1275,47 +1280,25 @@ export function AgenticChatInterface({
               </div>
             </div>
 
-            {/* Enhanced Status and Shortcuts */}
-            <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-6">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-                  <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
-                    AI Ready
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-                  <span>Press</span>
-                  <kbd className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded-md text-xs font-mono border border-slate-200 dark:border-slate-700">
-                    ⏎
-                  </kbd>
-                  <span>to send</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-                  <span>or</span>
-                  <kbd className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded-md text-xs font-mono border border-slate-200 dark:border-slate-700">
-                    Shift
-                  </kbd>
-                  <span>+</span>
-                  <kbd className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded-md text-xs font-mono border border-slate-200 dark:border-slate-700">
-                    ⏎
-                  </kbd>
-                  <span>for new line</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <span
-                  className={`text-sm font-medium transition-colors ${
-                    inputValue.length > 1800
-                      ? "text-red-500 dark:text-red-400"
-                      : inputValue.length > 1500
-                      ? "text-amber-500 dark:text-amber-400"
-                      : "text-slate-400 dark:text-slate-500"
-                  }`}
-                >
-                  {inputValue.length}/2000
+            {/* Minimal Status */}
+            <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 bg-orange-400 rounded-full"></div>
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  Press Enter to send
                 </span>
               </div>
+              <span
+                className={`text-xs transition-colors ${
+                  inputValue.length > 1800
+                    ? "text-red-500 dark:text-red-400"
+                    : inputValue.length > 1500
+                    ? "text-amber-500 dark:text-amber-400"
+                    : "text-slate-400 dark:text-slate-500"
+                }`}
+              >
+                {inputValue.length}/2000
+              </span>
             </div>
           </div>
         </div>

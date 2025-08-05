@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useDexieAuthStore } from '@/store/use-dexie-auth-store';
 import { useDexieOrganizationStore } from '@/store/use-dexie-organization-store';
 import { useLLMSettingsStore, LLMProvider, providerNames, ModelOption, providerModels } from '@/store/use-llm-settings-store';
+import { buildApiUrl, API_ENDPOINTS } from '@/lib/api-config';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -117,7 +118,7 @@ export default function NewProjectPage() {
 
         // Validate Azure configuration
 
-        const res = await fetch('http://127.0.0.1:8000/api/projects', {
+        const res = await fetch(buildApiUrl(API_ENDPOINTS.PROJECTS), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

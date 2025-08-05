@@ -196,11 +196,8 @@ export function InfinityKBLogoHero({ className }: { className?: string }) {
         className="text-center"
       >
         <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-cyan-600 bg-clip-text text-transparent mb-2">
-          InfinityKB
+          InfinityKB.AI
         </h1>
-        <p className="text-2xl md:text-3xl text-slate-500 dark:text-slate-400 font-medium tracking-wider">
-          .AI
-        </p>
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
