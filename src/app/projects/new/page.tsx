@@ -18,7 +18,7 @@ export default function NewProjectPage() {
   const router = useRouter();
   const { user, isAuthenticated } = useDexieAuthStore();
   const { createProject } = useDexieOrganizationStore();
-  
+
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -31,7 +31,7 @@ export default function NewProjectPage() {
     azureApiVersion: '2024-02-15-preview',
     azureEmbeddingModel: '',
   });
-  
+
   const [availableModels, setAvailableModels] = useState<ModelOption[]>([]);
   const [hoveredModel, setHoveredModel] = useState<ModelOption | null>(null);
   const [error, setError] = useState('');
@@ -114,8 +114,27 @@ export default function NewProjectPage() {
           apiVersion: formData.azureApiVersion,
           embeddingModel: formData.azureEmbeddingModel || undefined,
         };
-      }
 
+        // Validate Azure configuration
+
+        const res = await fetch('http://127.0.0.1:8000/api/projects', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            provider: formData.modelProvider,
+            apiKey: formData.apiKey,
+            azureEndpoint: formData.azureEndpoint,
+            azureDeployment: formData.azureDeploymentName,
+            azureApiVersion: formData.azureApiVersion,
+            azureEmbeddingModel: formData.azureEmbeddingModel || undefined,
+            projectName: formData.name || 'Default Project' // Use a default name if not set
+          })
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || 'Failed to save credentials to Azure Key Vault');
+        }
+      }
       const result = await createProject({
         name: formData.name,
         description: formData.description,
@@ -158,7 +177,7 @@ export default function NewProjectPage() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Projects
           </Button>
-          
+
           <div>
             <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-900 via-blue-800 to-purple-800 bg-clip-text text-transparent mb-2">
               Create New Project
@@ -177,7 +196,7 @@ export default function NewProjectPage() {
               Configure your project settings and AI model preferences
             </CardDescription>
           </CardHeader>
-          
+
           <CardContent className="p-8">
             <form onSubmit={handleSubmit} className="space-y-8">
               {/* Basic Information */}
@@ -185,7 +204,7 @@ export default function NewProjectPage() {
                 <h3 className="text-lg font-semibold text-slate-800 border-b border-slate-200 pb-2">
                   Basic Information
                 </h3>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="name" className="text-slate-700 font-medium">
@@ -200,7 +219,7 @@ export default function NewProjectPage() {
                       required
                     />
                   </div>
-                  
+
                   <div className="space-y-2 md:col-span-2">
                     <Label htmlFor="description" className="text-slate-700 font-medium">
                       Description *
@@ -222,7 +241,7 @@ export default function NewProjectPage() {
                 <h3 className="text-lg font-semibold text-slate-800 border-b border-slate-200 pb-2">
                   AI Model Configuration
                 </h3>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label className="text-slate-700 font-medium">AI Provider</Label>
@@ -250,8 +269,8 @@ export default function NewProjectPage() {
                           </SelectTrigger>
                           <SelectContent>
                             {availableModels.map((model) => (
-                              <SelectItem 
-                                key={model.id} 
+                              <SelectItem
+                                key={model.id}
                                 value={model.id}
                                 onMouseEnter={() => setHoveredModel(model)}
                                 onMouseLeave={() => setHoveredModel(null)}
@@ -262,7 +281,7 @@ export default function NewProjectPage() {
                           </SelectContent>
                         </Select>
                       </div>
-                      
+
                       {/* Model Details Floating Tooltip */}
                       {hoveredModel && (
                         <div className="absolute top-0 right-0 transform translate-x-4 z-50 w-80 p-4 bg-white rounded-lg border border-slate-200 shadow-xl backdrop-blur-sm" style={{ transform: 'translateX(1rem) translateY(calc(-100% - 1rem))' }}>
@@ -311,7 +330,7 @@ export default function NewProjectPage() {
                           Azure OpenAI Configuration
                         </h4>
                       </div>
-                      
+
                       <div className="space-y-2">
                         <Label htmlFor="azureEndpoint" className="text-slate-700 font-medium">
                           Azure Endpoint *
@@ -348,8 +367,8 @@ export default function NewProjectPage() {
                         <Label htmlFor="azureApiVersion" className="text-slate-700 font-medium">
                           API Version
                         </Label>
-                        <Select 
-                          value={formData.azureApiVersion} 
+                        <Select
+                          value={formData.azureApiVersion}
                           onValueChange={(value) => setFormData(prev => ({ ...prev, azureApiVersion: value }))}
                         >
                           <SelectTrigger className="border-slate-300 focus:border-blue-500">
