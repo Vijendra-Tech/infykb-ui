@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 // import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Eye, EyeOff, Mail, Lock, LogIn, AlertCircle, RefreshCw } from 'lucide-react';
-import { Logo } from '@/components/ui/logo';
+import { InfinityKBLogo } from '@/components/ui/infinity-kb-logo';
 import { motion } from 'framer-motion';
 import { db, initializeDatabase } from '@/lib/database';
 
@@ -121,7 +121,7 @@ export default function LoginPage() {
             transition={{ delay: 0.2, duration: 0.3 }}
             className="flex justify-center mb-4"
           >
-            <Logo size="lg" variant="default" />
+            <InfinityKBLogo size="lg" variant="default" showText={false} />
           </motion.div>
           <motion.h1
             initial={{ opacity: 0 }}

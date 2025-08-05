@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Eye, EyeOff, Mail, Lock, User, Building, Globe, UserPlus, AlertCircle, ArrowLeft } from 'lucide-react';
-import { Logo } from '@/components/ui/logo';
+import { InfinityKBLogo } from '@/components/ui/infinity-kb-logo';
 import { motion } from 'framer-motion';
 
 export default function RegisterPage() {
@@ -96,7 +96,7 @@ export default function RegisterPage() {
             transition={{ delay: 0.2, duration: 0.3 }}
             className="flex justify-center mb-4"
           >
-            <Logo size="lg" variant="default" />
+            <InfinityKBLogo size="lg" variant="default" showText={false} />
           </motion.div>
           <motion.h1
             initial={{ opacity: 0 }}

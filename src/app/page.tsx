@@ -31,6 +31,7 @@ import {
 import { useDexieAuthStore } from '@/store/use-dexie-auth-store';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { InfinityKBLogo } from '@/components/ui/infinity-kb-logo';
 
 // Force dynamic rendering to avoid build-time prerendering issues
 export const dynamic = 'force-dynamic';
@@ -770,29 +771,6 @@ export default function Home() {
                     </CardContent>
                   </Card>
                 </div>
-
-                {/* Empty State for when no projects exist */}
-                {/* Uncomment this when implementing real data fetching
-                <div className="text-center py-16 bg-white/60 backdrop-blur-sm rounded-xl border border-slate-200">
-                  <div className="relative inline-block mb-6">
-                    <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full blur-lg opacity-20 animate-pulse"></div>
-                    <div className="relative p-4 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full">
-                      <FolderOpen className="h-8 w-8 text-blue-600" />
-                    </div>
-                  </div>
-                  <h3 className="text-xl font-semibold text-slate-700 mb-2">No projects yet</h3>
-                  <p className="text-slate-500 mb-6 max-w-md mx-auto">
-                    Create your first project to start organizing your knowledge base and documentation.
-                  </p>
-                  <Button 
-                    onClick={() => router.push('/projects/new')}
-                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Your First Project
-                  </Button>
-                </div>
-                */}
                 </ScrollArea>
               </TabsContent>
               
@@ -1133,86 +1111,43 @@ export default function Home() {
 
   // If user is not logged in, show landing page
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
-      <div className="relative">
-        <main className="relative">
-          <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 text-white">
-            <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 lg:py-32">
-              <div className="text-center">
-                <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 bg-gradient-to-r from-white via-blue-100 to-indigo-200 bg-clip-text text-transparent">
-                  Infinity Knowledge Base
-                </h1>
-                
-                <p className="text-xl md:text-2xl text-blue-100 mb-8 max-w-3xl mx-auto leading-relaxed">
-                  Transform your organization's knowledge into actionable insights with AI-powered search, 
-                  intelligent organization, and seamless collaboration.
-                </p>
-                
-                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
-                  <Button 
-                    size="lg" 
-                    onClick={() => router.push('/auth/login')}
-                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-                  >
-                    Get Started Free
-                    <ArrowRight className="h-5 w-5 ml-2" />
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="lg"
-                    className="border-white/20 text-white hover:bg-white/10 px-8 py-4 text-lg font-semibold rounded-xl backdrop-blur-sm transition-all duration-300"
-                  >
-                    Watch Demo
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <section className="py-24 bg-white">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="text-center mb-16">
-                <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-4">
-                  Everything you need to manage knowledge
-                </h2>
-                <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-                  Our comprehensive platform provides all the tools your team needs to capture, 
-                  organize, and leverage organizational knowledge effectively.
-                </p>
-              </div>
-            </div>
-          </section>
-
-          <section className="py-24 bg-gradient-to-r from-blue-600 to-purple-600">
-            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="bg-white/10 backdrop-blur-lg border border-white/20 shadow-2xl rounded-xl p-12 text-center">
-                <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-                  Ready to transform your knowledge management?
-                </h2>
-                <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
-                  Join thousands of organizations already using InfinityKB to unlock their collective intelligence.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Button 
-                    size="lg" 
-                    onClick={() => router.push('/auth/login')}
-                    className="bg-white text-blue-600 hover:bg-blue-50 px-8 py-4 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-                  >
-                    Start Your Free Trial
-                    <ArrowRight className="h-5 w-5 ml-2" />
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="lg"
-                    className="border-white/20 text-white hover:bg-white/10 px-8 py-4 text-lg font-semibold rounded-xl backdrop-blur-sm transition-all duration-300"
-                  >
-                    Learn More
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </section>
-        </main>
+    <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="max-w-md w-full mx-auto px-6">
+        <div className="text-center space-y-8">
+          {/* Logo */}
+          <div className="flex justify-center">
+            <InfinityKBLogo size="xl" variant="default" showText={false} />
+          </div>
+          
+          {/* Title */}
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-cyan-600 bg-clip-text text-transparent">
+              InfinityKB
+            </h1>
+            <p className="text-slate-600 text-lg">
+              Intelligent Knowledge Management
+            </p>
+          </div>
+          
+          {/* Action Buttons */}
+          <div className="space-y-3">
+            <Button 
+              size="lg" 
+              onClick={() => router.push('/auth/login')}
+              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 text-base font-medium rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+            >
+              Sign In
+            </Button>
+            <Button 
+              variant="outline" 
+              size="lg"
+              onClick={() => router.push('/auth/register')}
+              className="w-full border-slate-300 text-slate-700 hover:bg-slate-50 py-3 text-base font-medium rounded-lg transition-all duration-200"
+            >
+              Create Account
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );
