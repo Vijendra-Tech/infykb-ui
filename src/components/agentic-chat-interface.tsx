@@ -1280,6 +1280,82 @@ export function AgenticChatInterface({
               </div>
             </div>
 
+            {/* Compact L1/L2/L3 Support Prompts */}
+            {messages.length === 0 && (
+              <div className="mt-4">
+                <div className="flex flex-wrap gap-2">
+                  {/* L1 Support Pills */}
+                  <button
+                    onClick={() => setInputValue("My application won't start. Can you help me troubleshoot?")}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/50 text-blue-700 dark:text-blue-300 rounded-full border border-blue-200 dark:border-blue-800 transition-colors"
+                  >
+                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                    L1: App won't start
+                  </button>
+                  <button
+                    onClick={() => setInputValue("I'm getting a login error. What should I check?")}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/50 text-blue-700 dark:text-blue-300 rounded-full border border-blue-200 dark:border-blue-800 transition-colors"
+                  >
+                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                    L1: Login issues
+                  </button>
+                  <button
+                    onClick={() => setInputValue("The page is loading slowly. Can you help optimize it?")}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/50 text-blue-700 dark:text-blue-300 rounded-full border border-blue-200 dark:border-blue-800 transition-colors"
+                  >
+                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                    L1: Performance
+                  </button>
+                  
+                  {/* L2 Support Pills */}
+                  <button
+                    onClick={() => setInputValue("I'm getting a 500 error when submitting forms. Can you help debug this?")}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-950/50 text-amber-700 dark:text-amber-300 rounded-full border border-amber-200 dark:border-amber-800 transition-colors"
+                  >
+                    <div className="w-1.5 h-1.5 bg-amber-500 rounded-full"></div>
+                    L2: API debugging
+                  </button>
+                  <button
+                    onClick={() => setInputValue("My database queries are running slowly. How can I optimize them?")}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-950/50 text-amber-700 dark:text-amber-300 rounded-full border border-amber-200 dark:border-amber-800 transition-colors"
+                  >
+                    <div className="w-1.5 h-1.5 bg-amber-500 rounded-full"></div>
+                    L2: DB optimization
+                  </button>
+                  <button
+                    onClick={() => setInputValue("My React components are re-rendering too often. How can I fix this?")}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-950/50 text-amber-700 dark:text-amber-300 rounded-full border border-amber-200 dark:border-amber-800 transition-colors"
+                  >
+                    <div className="w-1.5 h-1.5 bg-amber-500 rounded-full"></div>
+                    L2: React optimization
+                  </button>
+                  
+                  {/* L3 Support Pills */}
+                  <button
+                    onClick={() => setInputValue("I need to design a microservices architecture for my application. Can you help?")}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 text-red-700 dark:text-red-300 rounded-full border border-red-200 dark:border-red-800 transition-colors"
+                  >
+                    <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+                    L3: Architecture
+                  </button>
+                  <button
+                    onClick={() => setInputValue("How do I implement distributed caching across multiple services?")}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 text-red-700 dark:text-red-300 rounded-full border border-red-200 dark:border-red-800 transition-colors"
+                  >
+                    <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+                    L3: Distributed systems
+                  </button>
+                  <button
+                    onClick={() => setInputValue("Can you help me design a scalable CI/CD pipeline for enterprise deployment?")}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 text-red-700 dark:text-red-300 rounded-full border border-red-200 dark:border-red-800 transition-colors"
+                  >
+                    <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+                    L3: DevOps & scaling
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Minimal Status */}
             <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2">

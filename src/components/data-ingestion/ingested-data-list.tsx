@@ -45,35 +45,7 @@ export function IngestedDataList() {
     setCurrentPage(page);
   };
   
-  // Add mock data for demonstration
-  const addMockData = () => {
-    const mockData: IngestedDataInfo[] = [];
-    const fileTypes = ["PDF", "DOCX", "TXT", "CSV", "JSON"];
-    
-    for (let i = 1; i <= 15; i++) {
-      const fileType = fileTypes[Math.floor(Math.random() * fileTypes.length)];
-      mockData.push({
-        id: `doc-${i}`,
-        fileName: `Document ${i}.${fileType.toLowerCase()}`,
-        fileType,
-        uploadDate: new Date(Date.now() - Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000).toISOString(),
-        size: Math.floor(Math.random() * 10000) + 100,
-        status: Math.random() > 0.2 ? "processed" : "failed",
-        metadata: {
-          sourceName: `Mock Source ${Math.floor(Math.random() * 5) + 1}`,
-          errorMessage: Math.random() > 0.8 ? "Processing error" : undefined
-        }
-      });
-    }
-    
-    setIngestedData(mockData);
-    setLoading(false);
-    
-    toast({
-      title: "Mock data loaded",
-      description: "15 mock documents have been loaded for demonstration",
-    });
-  };
+
 
   // Function to load ingested data from Azure Function
   const loadIngestedData = async () => {
@@ -81,10 +53,9 @@ export function IngestedDataList() {
     setError(null);
     
     try {
-      // For demonstration, use mock data instead of real API call
-      setTimeout(() => {
-        addMockData();
-      }, 500);
+      const data = await fetchIngestedData();
+      setIngestedData(data);
+      setLoading(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch ingested data');
       toast({
@@ -98,10 +69,7 @@ export function IngestedDataList() {
 
   // Load data on component mount
   useEffect(() => {
-    // Use mock data instead of real API call for demonstration
-    setTimeout(() => {
-      addMockData();
-    }, 500);
+    loadIngestedData();
   }, []);
 
   // Function to handle document deletion
@@ -193,31 +161,32 @@ export function IngestedDataList() {
         </Button>
       </CardHeader>
       <CardContent className="p-0 mx-auto max-h-[600px] overflow-y-auto">
-        {error ? (
-          <div className="text-center py-16 px-4">
-            <AlertCircle className="h-12 w-12 mx-auto mb-4 text-red-500" />
-            <p className="text-red-500 text-lg font-medium mb-2">{error}</p>
-            <p className="text-muted-foreground mb-6 max-w-md mx-auto">There was an error loading your ingested documents.</p>
-            <Button 
-              variant="outline" 
-              onClick={loadIngestedData} 
-              className="mt-4 px-5 py-2 font-medium shadow-sm"
-            >
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <span className="ml-2">Loading ingested documents...</span>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Error Loading Documents</h3>
+            <p className="text-muted-foreground mb-4">{error}</p>
+            <Button onClick={loadIngestedData} variant="outline">
+              <RefreshCw className="h-4 w-4 mr-2" />
               Try Again
             </Button>
           </div>
-        ) : loading ? (
-          <div className="flex flex-col justify-center items-center py-16">
-            <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
-            <p className="text-muted-foreground">Loading documents...</p>
-          </div>
         ) : ingestedData.length === 0 ? (
-          <div className="text-center py-16 px-4">
-            <div className="rounded-full bg-primary/10 p-5 mb-6 shadow-inner mx-auto w-24 h-24 flex items-center justify-center">
-              <FileText className="h-12 w-12 text-primary/70" />
-            </div>
-            <h3 className="font-medium text-xl mb-3">Your Document Repository is Empty</h3>
-            <p className="text-muted-foreground text-base max-w-md mx-auto">Processed files will appear here once they've been successfully added to your knowledge base.</p>
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No Documents Found</h3>
+            <p className="text-muted-foreground mb-4">
+              No ingested documents available. Start by adding a data source and ingesting some documents.
+            </p>
+            <Button onClick={loadIngestedData} variant="outline">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
           </div>
         ) : (
           <div className="overflow-x-auto overflow-y-visible">

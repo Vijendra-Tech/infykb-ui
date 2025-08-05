@@ -406,12 +406,7 @@ export function Sidebar() {
                 />
               </>
             )}
-            <SidebarItem
-              icon={<Clock className="h-5 w-5" />}
-              label="Chat History"
-              badge={chats.length.toString()}
-              href="#"
-            />
+
           </div>
         )}
       </div>

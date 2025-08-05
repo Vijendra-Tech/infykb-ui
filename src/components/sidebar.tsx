@@ -18,8 +18,8 @@ import {
   Settings,
   Palette,
   ChevronUp,
-  LogOut
-} from 'lucide-react';
+  LogOut,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -35,7 +35,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import { InfinityKBLogoCompact } from "@/components/ui/infinity-kb-logo";
-
 
 import {
   Tooltip,
@@ -54,68 +53,88 @@ interface SidebarItemProps {
   disabledTooltip?: string;
 }
 
-const SidebarItem = ({ icon, label, active, badge, href = "#", onClick, disabled = false, disabledTooltip }: SidebarItemProps) => {
+const SidebarItem = ({
+  icon,
+  label,
+  active,
+  badge,
+  href = "#",
+  onClick,
+  disabled = false,
+  disabledTooltip,
+}: SidebarItemProps) => {
   const { collapsed } = useSidebar();
-  
+
   if (!collapsed) {
     const className = `group flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors duration-150 ease-out relative ${
       disabled
         ? "text-slate-400 dark:text-slate-500 cursor-not-allowed opacity-60"
-        : active 
-        ? "bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 shadow-sm border border-slate-300 dark:border-slate-600" 
+        : active
+        ? "bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 shadow-sm border border-slate-300 dark:border-slate-600"
         : "hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 cursor-pointer"
     }`;
-    
+
     const content = (
       <>
-        <div className={`${
-          disabled 
-            ? "text-slate-400 dark:text-slate-500"
-            : active ? "text-slate-700 dark:text-slate-300" : "text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-300"
-        }`}>
+        <div
+          className={`${
+            disabled
+              ? "text-slate-400 dark:text-slate-500"
+              : active
+              ? "text-slate-700 dark:text-slate-300"
+              : "text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-300"
+          }`}
+        >
           {icon}
         </div>
-        <span className={`text-sm font-medium ${
-          disabled
-            ? "text-slate-400 dark:text-slate-500"
-            : active ? "text-slate-800 dark:text-slate-200" : "text-slate-600 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-slate-100"
-        }`}>
+        <span
+          className={`text-sm font-medium ${
+            disabled
+              ? "text-slate-400 dark:text-slate-500"
+              : active
+              ? "text-slate-800 dark:text-slate-200"
+              : "text-slate-600 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-slate-100"
+          }`}
+        >
           {label}
         </span>
-          {badge && (
-            <span className={`relative z-10 ml-auto text-xs px-1.5 py-0.5 rounded-full font-medium ${
-              disabled 
+        {badge && (
+          <span
+            className={`relative z-10 ml-auto text-xs px-1.5 py-0.5 rounded-full font-medium ${
+              disabled
                 ? "bg-slate-300 dark:bg-slate-600 text-slate-500 dark:text-slate-400"
                 : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
-            }`}>
-              {badge}
-            </span>
-          )}
+            }`}
+          >
+            {badge}
+          </span>
+        )}
       </>
     );
-    
+
     if (disabled) {
       return (
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className={className}>
-              {content}
-            </div>
+            <div className={className}>{content}</div>
           </TooltipTrigger>
-          <TooltipContent side="right" className="bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900 border-slate-700 dark:border-slate-300 shadow-lg">
+          <TooltipContent
+            side="right"
+            className="bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900 border-slate-700 dark:border-slate-300 shadow-lg"
+          >
             {disabledTooltip || "Coming Soon"}
           </TooltipContent>
         </Tooltip>
       );
     }
-    
+
     if (onClick) {
       return (
-        <button 
+        <button
           onClick={(e) => {
             e.preventDefault();
             onClick();
-          }} 
+          }}
           className={className}
           type="button"
         >
@@ -123,7 +142,7 @@ const SidebarItem = ({ icon, label, active, badge, href = "#", onClick, disabled
         </button>
       );
     }
-    
+
     return (
       <Link href={href} className={className}>
         {content}
@@ -135,40 +154,40 @@ const SidebarItem = ({ icon, label, active, badge, href = "#", onClick, disabled
     disabled
       ? "text-slate-400 dark:text-slate-500 cursor-not-allowed opacity-60"
       : active
-      ? "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 shadow-sm border border-slate-300 dark:border-slate-600" 
+      ? "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 shadow-sm border border-slate-300 dark:border-slate-600"
       : "hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer"
   }`;
-  
+
   const content = (
     <>
       <div className={disabled ? "text-slate-400 dark:text-slate-500" : ""}>
         {icon}
       </div>
       {badge && (
-        <span className={`absolute -top-1 -right-1 text-xs px-1.5 py-0.5 rounded-full font-medium ${
-          disabled 
-            ? "bg-slate-400 dark:bg-slate-500 text-slate-300 dark:text-slate-400"
-            : "bg-slate-600 dark:bg-slate-400 text-white dark:text-slate-900"
-        }`}>
+        <span
+          className={`absolute -top-1 -right-1 text-xs px-1.5 py-0.5 rounded-full font-medium ${
+            disabled
+              ? "bg-slate-400 dark:bg-slate-500 text-slate-300 dark:text-slate-400"
+              : "bg-slate-600 dark:bg-slate-400 text-white dark:text-slate-900"
+          }`}
+        >
           {badge}
         </span>
       )}
     </>
   );
-  
+
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         {disabled ? (
-          <div className={className}>
-            {content}
-          </div>
+          <div className={className}>{content}</div>
         ) : onClick ? (
-          <button 
+          <button
             onClick={(e) => {
               e.preventDefault();
               onClick();
-            }} 
+            }}
             className={className}
             type="button"
           >
@@ -180,8 +199,11 @@ const SidebarItem = ({ icon, label, active, badge, href = "#", onClick, disabled
           </Link>
         )}
       </TooltipTrigger>
-      <TooltipContent side="right" className="bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900 border-slate-700 dark:border-slate-300 shadow-lg">
-        {disabled ? (disabledTooltip || "Coming Soon") : label}
+      <TooltipContent
+        side="right"
+        className="bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900 border-slate-700 dark:border-slate-300 shadow-lg"
+      >
+        {disabled ? disabledTooltip || "Coming Soon" : label}
       </TooltipContent>
     </Tooltip>
   );
@@ -230,7 +252,8 @@ const SidebarSection = ({
 
 export const Sidebar = () => {
   const { collapsed, setCollapsed } = useSidebar();
-  const { user, isAuthenticated, logout, isAdmin, isApprover, isMember } = useDexieAuthStore();
+  const { user, isAuthenticated, logout, isAdmin, isApprover, isMember } =
+    useDexieAuthStore();
   const { chats, addChat } = useChatHistoryStore();
   const pathname = usePathname();
   const router = useRouter();
@@ -241,11 +264,11 @@ export const Sidebar = () => {
   const handleLogout = async () => {
     try {
       await logout();
-      router.push('/auth/login');
+      router.push("/auth/login");
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error("Logout error:", error);
       // Navigate to login even if logout fails
-      router.push('/auth/login');
+      router.push("/auth/login");
     }
   };
 
@@ -258,7 +281,7 @@ export const Sidebar = () => {
       {/* Header */}
       <div className="h-18 px-6 flex items-center justify-between bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 relative overflow-hidden">
         <div className="absolute inset-0 bg-slate-100/30 dark:bg-slate-800/30" />
-        
+
         <div className="relative z-10">
           <InfinityKBLogoCompact size="md" />
         </div>
@@ -266,7 +289,7 @@ export const Sidebar = () => {
         {!collapsed && (
           <button
             onClick={() => {
-              console.log('Collapse button clicked');
+              console.log("Collapse button clicked");
               setCollapsed(true);
             }}
             className="relative z-20 p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
@@ -280,7 +303,7 @@ export const Sidebar = () => {
         {collapsed && (
           <button
             onClick={() => {
-              console.log('Expand button clicked');
+              console.log("Expand button clicked");
               setCollapsed(false);
             }}
             className="absolute top-1/2 -translate-y-1/2 right-2 p-2 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors z-20 cursor-pointer"
@@ -291,8 +314,6 @@ export const Sidebar = () => {
           </button>
         )}
       </div>
-
-
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-auto py-6 px-4 bg-white dark:bg-slate-950 relative">
@@ -381,8 +402,6 @@ export const Sidebar = () => {
           </SidebarSection>
         )}
 
-
-
         {collapsed && (
           <div className="flex flex-col items-center space-y-2">
             <SidebarItem
@@ -460,55 +479,74 @@ export const Sidebar = () => {
               active={pathname === "/chat-history"}
               badge={chats.length > 0 ? chats.length.toString() : undefined}
               href="/chat-history"
+              disabled={true}
+              disabledTooltip="Coming Soon" 
             />
           </div>
         )}
-
       </div>
-      
+
       {/* Bottom Corner User Menu */}
       {user && (
         <div className="mt-auto border-t border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50">
           {!collapsed ? (
             /* Expanded User Menu */
-            <DropdownMenu open={isUserMenuOpen} onOpenChange={setIsUserMenuOpen}>
+            <DropdownMenu
+              open={isUserMenuOpen}
+              onOpenChange={setIsUserMenuOpen}
+            >
               <DropdownMenuTrigger asChild>
-                <button 
+                <button
                   className="w-full p-4 flex items-center gap-3 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group"
                   onClick={() => {
-                    console.log('User menu button clicked, current state:', isUserMenuOpen);
+                    console.log(
+                      "User menu button clicked, current state:",
+                      isUserMenuOpen
+                    );
                     setIsUserMenuOpen(!isUserMenuOpen);
                   }}
                 >
                   <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
-                    {user?.name?.charAt(0).toUpperCase() || 'U'}
+                    {user?.name?.charAt(0).toUpperCase() || "U"}
                   </div>
                   <div className="flex-1 text-left">
-                    <div className="font-medium text-slate-700 dark:text-slate-300 text-sm">{user?.name}</div>
-                    <div className="text-slate-500 dark:text-slate-400 text-xs capitalize">{user?.role?.replace('_', ' ')}</div>
+                    <div className="font-medium text-slate-700 dark:text-slate-300 text-sm">
+                      {user?.name}
+                    </div>
+                    <div className="text-slate-500 dark:text-slate-400 text-xs capitalize">
+                      {user?.role?.replace("_", " ")}
+                    </div>
                   </div>
                   <ChevronUp className="h-4 w-4 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent side="top" align="start" className="w-56 mb-2 ml-4">
+              <DropdownMenuContent
+                side="top"
+                align="start"
+                className="w-56 mb-2 ml-4"
+              >
                 <div className="p-2 space-y-2">
                   <div className="flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
                     <div className="flex items-center">
                       <Palette className="h-4 w-4 mr-2 text-slate-600 dark:text-slate-400" />
-                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Theme</span>
+                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                        Theme
+                      </span>
                     </div>
                     <ModeToggle />
                   </div>
                   <div className="flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
                     <div className="flex items-center">
                       <Settings className="h-4 w-4 mr-2 text-slate-600 dark:text-slate-400" />
-                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Animation</span>
+                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                        Animation
+                      </span>
                     </div>
                     <AnimationToggle />
                   </div>
                 </div>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   onClick={handleLogout}
                   className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer"
                 >
@@ -519,46 +557,60 @@ export const Sidebar = () => {
             </DropdownMenu>
           ) : (
             /* Collapsed User Menu */
-            <DropdownMenu open={isCollapsedUserMenuOpen} onOpenChange={setIsCollapsedUserMenuOpen}>
+            <DropdownMenu
+              open={isCollapsedUserMenuOpen}
+              onOpenChange={setIsCollapsedUserMenuOpen}
+            >
               <DropdownMenuTrigger asChild>
-                <button 
+                <button
                   className="w-full p-2 flex justify-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                   onClick={() => {
-                    console.log('Collapsed user menu button clicked, current state:', isCollapsedUserMenuOpen);
+                    console.log(
+                      "Collapsed user menu button clicked, current state:",
+                      isCollapsedUserMenuOpen
+                    );
                     setIsCollapsedUserMenuOpen(!isCollapsedUserMenuOpen);
                   }}
                 >
                   <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
-                    {user?.name?.charAt(0).toUpperCase() || 'U'}
+                    {user?.name?.charAt(0).toUpperCase() || "U"}
                   </div>
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent side="right" align="end" className="w-56 mb-2">
+              <DropdownMenuContent
+                side="right"
+                align="end"
+                className="w-56 mb-2"
+              >
                 <div className="px-2 py-1.5 text-sm font-medium text-slate-700 dark:text-slate-300">
                   {user?.name}
                 </div>
                 <div className="px-2 pb-2 text-xs text-slate-500 dark:text-slate-400 capitalize">
-                  {user?.role?.replace('_', ' ')}
+                  {user?.role?.replace("_", " ")}
                 </div>
                 <DropdownMenuSeparator />
                 <div className="p-2 space-y-2">
                   <div className="flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
                     <div className="flex items-center">
                       <Palette className="h-4 w-4 mr-2 text-slate-600 dark:text-slate-400" />
-                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Theme</span>
+                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                        Theme
+                      </span>
                     </div>
                     <ModeToggle />
                   </div>
                   <div className="flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
                     <div className="flex items-center">
                       <Settings className="h-4 w-4 mr-2 text-slate-600 dark:text-slate-400" />
-                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Animation</span>
+                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                        Animation
+                      </span>
                     </div>
                     <AnimationToggle />
                   </div>
                 </div>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   onClick={handleLogout}
                   className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer"
                 >
@@ -572,4 +624,4 @@ export const Sidebar = () => {
       )}
     </div>
   );
-}
+};
