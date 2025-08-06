@@ -1,4 +1,3 @@
-"use client";
 
 import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -13,7 +12,8 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Input } from "@/components/ui/input";
+import { Suspense } from "react";
+import { MDXRemote } from "next-mdx-remote-client/rsc";
 
 import {
   Send,
@@ -56,15 +56,14 @@ import { SimilarIssuesDisplay } from "@/components/similar-issues-display";
 import { useToast } from "@/components/ui/use-toast";
 import { useChatHistory } from "@/hooks/use-chat-history";
 import ChatHistoryService from "@/services/chat-history-service";
-import { ingestedGitHubSearchService } from "@/services/ingested-github-search-service";
 import { ChatMessage } from "@/lib/database";
 import { generateUUID } from "@/lib/utils";
 import { InfinityKBLogoHero } from "./ui/infinity-kb-logo";
 import { buildApiUrl, API_ENDPOINTS } from "@/lib/api-config";
 
-
 // AI Response Match structure
 interface AIResponseMatch {
+  description: any;
   title: string;
   summary: string;
   created: string;
@@ -75,6 +74,8 @@ interface AIResponseMatch {
 
 // AI Response structure
 interface AIResponse {
+  ai_summary: string;
+  potential_fix: string;
   matches: AIResponseMatch[];
 }
 
@@ -124,7 +125,6 @@ export function AgenticChatInterface({
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [relatedIssues, setRelatedIssues] = useState<GitHubIssue[]>([]);
-  const [knowledgeNodes] = useState<KnowledgeGraphNode[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [sideDrawerOpen, setSideDrawerOpen] = useState(false);
   const [sideDrawerContent, setSideDrawerContent] = useState<
@@ -161,12 +161,7 @@ export function AgenticChatInterface({
   const { toast } = useToast();
 
   // Function to simulate AI response with the provided structure
-  const simulateAIResponse = async (query: string) => {
-    // This simulates the AI response structure you provided
-    // In production, this would be replaced with actual AI API call
-
-    // await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
-
+  const getAIResponse = async (query: string) => {
     const res = await fetch(buildApiUrl(API_ENDPOINTS.SEARCH), {
       method: "POST",
       headers: {
@@ -180,68 +175,40 @@ export function AgenticChatInterface({
       return data;
     }
 
-    // return {
-    //   matches: [
-    //     {
-    //       title: "Security group inheritance issue in SuiteCRM",
-    //       summary:
-    //         "Issue with security group inheritance when modifying records. The assigned user's security groups are incorrectly re-inherited during record modification instead of only at creation time.",
-    //       created: "2025-06-24T08:36:36Z",
-    //       user: "61022311",
-    //       url: "https://api.github.com/repos/SuiteCRM/SuiteCRM/issues/10693",
-    //       score: 1.0000001,
-    //     },
-    //     {
-    //       title: "Fix for security group inheritance on record modification",
-    //       summary:
-    //         "Pull request that modifies the Security Suite's 'Inherit from Assigned To User' functionality to ensure security group inheritance only occurs upon record creation, not during subsequent modifications.",
-    //       created: "2025-06-24T08:56:57Z",
-    //       user: "SinergiaCRM",
-    //       url: null,
-    //       score: 0.9032566,
-    //     },
-    //     {
-    //       title: "Security group not inherit to child records",
-    //       summary:
-    //         "Custom modules not inheriting security groups from parent to child records. Staff can see the application but nothing in subpanels. May be a bug or limitation for custom modules.",
-    //       created: "2019-08-04T15:41:42Z",
-    //       user: "28486136",
-    //       url: "https://api.github.com/repos/SuiteCRM/SuiteCRM/issues/7685",
-    //       score: 0.8009803,
-    //     },
-    //   ],
-    // };
+    return {
+      matches: [],
+    };
   };
 
   // Function to generate summary from matches
-  const generateSummary = async (
-    matches: AIResponseMatch[]
-  ): Promise<string> => {
-    // Simulate AI processing time
-    await new Promise((resolve) =>
-      setTimeout(resolve, 800 + Math.random() * 1200)
-    );
+  // const generateSummary = async (
+  //   matches: AIResponseMatch[]
+  // ): Promise<string> => {
+  //   // Simulate AI processing time
+  //   await new Promise((resolve) =>
+  //     setTimeout(resolve, 800 + Math.random() * 1200)
+  //   );
 
-    // Generate a comprehensive summary based on the matches
-    const topMatch = matches[0];
-    const totalMatches = matches.length;
+  //   // Generate a comprehensive summary based on the matches
+  //   const topMatch = matches[0];
+  //   const totalMatches = matches.length;
 
-    return (
-      `Based on ${totalMatches} relevant matches found, here's a comprehensive summary:\n\n` +
-      `The primary issue appears to be "${
-        topMatch.title
-      }" with a confidence score of ${topMatch.score.toFixed(4)}. ` +
-      `This issue was reported by user ${
-        topMatch.user
-      } and involves ${topMatch.summary.substring(0, 100)}...\n\n` +
-      `Key themes across all matches include security group inheritance, record modification behaviors, and potential bugs in custom modules. ` +
-      `The issues span from ${new Date(
-        matches[matches.length - 1].created
-      ).getFullYear()} to ${new Date(matches[0].created).getFullYear()}, ` +
-      `indicating this is an ongoing concern in the system.\n\n` +
-      `Recommended next steps: Review the highest-scoring match for immediate solutions, and consider the patterns across all matches for systemic improvements.`
-    );
-  };
+  //   return (
+  //     `Based on ${totalMatches} relevant matches found, here's a comprehensive summary:\n\n` +
+  //     `The primary issue appears to be "${
+  //       topMatch.title
+  //     }" with a confidence score of ${topMatch.score.toFixed(4)}. ` +
+  //     `This issue was reported by user ${
+  //       topMatch.user
+  //     } and involves ${topMatch.summary.substring(0, 100)}...\n\n` +
+  //     `Key themes across all matches include security group inheritance, record modification behaviors, and potential bugs in custom modules. ` +
+  //     `The issues span from ${new Date(
+  //       matches[matches.length - 1].created
+  //     ).getFullYear()} to ${new Date(matches[0].created).getFullYear()}, ` +
+  //     `indicating this is an ongoing concern in the system.\n\n` +
+  //     `Recommended next steps: Review the highest-scoring match for immediate solutions, and consider the patterns across all matches for systemic improvements.`
+  //   );
+  // };
 
   // Function to handle individual match summarize button click
   const handleMatchSummarize = async (
@@ -302,6 +269,19 @@ export function AgenticChatInterface({
     }));
   };
 
+  function showFormattedLines(rawText: string) {
+    // Split by custom delimiters: headers, lists, steps, and sentence endings
+    const regex =
+      /(?<=\*\*[^*]+\*\*)|(?<=\n)|(?<=\.\s)|(?<=\?\s)|(?<=:\s)|(?=-\s)|(?=\d+\.\s)/g;
+
+    const lines = rawText
+      .split(regex)
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+
+    return lines;
+  }
+
   // Function to generate summary for a specific match
   const generateMatchSummary = async (
     match: AIResponseMatch
@@ -319,15 +299,14 @@ export function AgenticChatInterface({
     });
 
     return (
-      `**Issue Analysis for: ${match.title}**\n\n` +
-      `**Summary:** ${match.summary}\n\n` +
+      `**Description for: ${match.title}**\n\n` +
+      `${match.description}\n\n` +
       `**Key Details:**\n` +
       `• Reported by: ${match.user}\n` +
       `• Date: ${formattedDate}\n` +
       `• Confidence Score: ${match.score.toFixed(4)} (${
         match.score > 0.9 ? "High" : match.score > 0.7 ? "Medium" : "Low"
-      } relevance)\n\n` 
-      
+      } relevance)\n\n`
     );
   };
 
@@ -524,7 +503,7 @@ export function AgenticChatInterface({
   };
 
   const handleSendMessage = async () => {
-    // Validate input first - don't start loading 
+    // Validate input first - don't start loading
     if (!inputValue.trim()) {
       toast({
         title: "Empty message",
@@ -581,7 +560,7 @@ export function AgenticChatInterface({
       setIsTyping(false);
 
       // Get AI response with matches structure
-      const aiResponse = await simulateAIResponse(userMessage.content);
+      const aiResponse = await getAIResponse(userMessage.content);
 
       // Update the message with AI response data
       setMessages((prev) =>
@@ -611,8 +590,9 @@ export function AgenticChatInterface({
       await saveMessageToHistory(finalMessage);
     } catch (error) {
       console.error("Error processing message:", error);
-      
-      const errorMessage = "I apologize, but I encountered an error while processing your request. Please try again.";
+
+      const errorMessage =
+        "I apologize, but I encountered an error while processing your request. Please try again.";
 
       // If we have created an AI message, update it with error content
       if (aiMessageId) {
@@ -630,7 +610,7 @@ export function AgenticChatInterface({
               : msg
           )
         );
-        
+
         // Save the updated error message to database
         try {
           const errorMsg: Message = {
@@ -662,7 +642,7 @@ export function AgenticChatInterface({
           console.error("Failed to save error message:", saveError);
         }
       }
-      
+
       // Show error toast
       toast({
         title: "Error",
@@ -783,7 +763,7 @@ export function AgenticChatInterface({
           return (
             <Card
               key={index}
-              className="border border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-600 transition-colors"
+              className="border border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-600 transition-colors min-w-3xl"
             >
               {/* Enhanced Info Row */}
               <div className="p-3">
@@ -816,7 +796,7 @@ export function AgenticChatInterface({
                         ? "Loading..."
                         : expandedState?.isExpanded
                         ? "Hide"
-                        : "Summarize"}
+                        : "See Description"}
                     </Button>
 
                     {webUrl && (
@@ -903,10 +883,7 @@ export function AgenticChatInterface({
     const isUser = message.sender === "user";
 
     return (
-      <div
-        key={message.id}
-        className="group flex justify-start mb-8"
-      >
+      <div key={message.id} className="group flex justify-start mb-8">
         <div className="flex items-start gap-4 max-w-[85%]">
           {/* Avatar */}
           <div className="relative flex-shrink-0">
@@ -946,8 +923,7 @@ export function AgenticChatInterface({
             </div>
 
             {/* Clean Message Content */}
-            <div className="relative w-full py-2"
-            >
+            <div className="relative w-full py-2">
               {/* Message Content */}
               <div className="prose prose-sm max-w-none dark:prose-invert">
                 {message.type === "code" ? (
@@ -986,10 +962,18 @@ export function AgenticChatInterface({
                 message.aiResponse &&
                 message.aiResponse.matches && (
                   <div className="mt-4">
+                    <Suspense fallback={<>Summary loading...</>}>
+                      <MDXRemote
+                        source={message.aiResponse.ai_summary}
+                      />
+                    </Suspense>
+                    <div>
+                      {/* <p>{JSON.parse(message.aiResponse.ai_summary)}</p> */}
+                    </div>
                     <div className="flex items-center gap-2 mb-3">
-                      <Sparkles className="h-4 w-4 text-blue-500" />
                       <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                        Relevant Matches ({message.aiResponse.matches.length})
+                        Drawing from the following tickets, I identified the
+                        root cause and formulated the solution.
                       </span>
                     </div>
                     {renderAIResponseMatches(message.aiResponse.matches)}
@@ -1047,44 +1031,57 @@ export function AgenticChatInterface({
               {!isUser && (
                 <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
                   <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => copyToClipboard(message.content || 'No content to copy')}
-                      className="h-8 px-3 text-xs bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600"
-                    >
-                      <Copy className="h-3 w-3 mr-1" />
-                      Copy
-                    </Button>
-                    
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleMessageReaction(message.id, "up")}
-                      className={`h-8 px-3 text-xs ${
-                        messageReactions[message.id] === "up"
-                          ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
-                          : "bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600"
-                      }`}
-                    >
-                      <ThumbsUp className="h-3 w-3 mr-1" />
-                      Like
-                    </Button>
-                    
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleMessageReaction(message.id, "down")}
-                      className={`h-8 px-3 text-xs ${
-                        messageReactions[message.id] === "down"
-                          ? "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
-                          : "bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600"
-                      }`}
-                    >
-                      <ThumbsDown className="h-3 w-3 mr-1" />
-                      Dislike
-                    </Button>
-                    
+                    {message.aiResponse &&
+                      message.aiResponse.matches?.length > 0 && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              copyToClipboard(
+                                message.content || "No content to copy"
+                              )
+                            }
+                            className="h-8 px-3 text-xs bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600"
+                          >
+                            <Copy className="h-3 w-3 mr-1" />
+                            Copy
+                          </Button>
+
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              handleMessageReaction(message.id, "up")
+                            }
+                            className={`h-8 px-3 text-xs ${
+                              messageReactions[message.id] === "up"
+                                ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+                                : "bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600"
+                            }`}
+                          >
+                            <ThumbsUp className="h-3 w-3 mr-1" />
+                            Like
+                          </Button>
+
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              handleMessageReaction(message.id, "down")
+                            }
+                            className={`h-8 px-3 text-xs ${
+                              messageReactions[message.id] === "down"
+                                ? "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
+                                : "bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600"
+                            }`}
+                          >
+                            <ThumbsDown className="h-3 w-3 mr-1" />
+                            Dislike
+                          </Button>
+                        </>
+                      )}
+
                     {message.metadata?.relatedIssues &&
                       message.metadata.relatedIssues.length > 0 && (
                         <Button
@@ -1094,7 +1091,8 @@ export function AgenticChatInterface({
                           className="h-8 px-3 text-xs bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600"
                         >
                           <Bug className="h-3 w-3 mr-1" />
-                          {message.metadata.relatedIssues?.length || 0} Similar Issues
+                          {message.metadata.relatedIssues?.length || 0} Similar
+                          Issues
                         </Button>
                       )}
                   </div>
@@ -1286,67 +1284,103 @@ export function AgenticChatInterface({
                 <div className="flex flex-wrap gap-2">
                   {/* L1 Support Pills */}
                   <button
-                    onClick={() => setInputValue("My application won't start. Can you help me troubleshoot?")}
+                    onClick={() =>
+                      setInputValue(
+                        "My application won't start. Can you help me troubleshoot?"
+                      )
+                    }
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/50 text-blue-700 dark:text-blue-300 rounded-full border border-blue-200 dark:border-blue-800 transition-colors"
                   >
                     <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
                     L1: App won't start
                   </button>
                   <button
-                    onClick={() => setInputValue("I'm getting a login error. What should I check?")}
+                    onClick={() =>
+                      setInputValue(
+                        "I'm getting a login error. What should I check?"
+                      )
+                    }
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/50 text-blue-700 dark:text-blue-300 rounded-full border border-blue-200 dark:border-blue-800 transition-colors"
                   >
                     <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
                     L1: Login issues
                   </button>
                   <button
-                    onClick={() => setInputValue("The page is loading slowly. Can you help optimize it?")}
+                    onClick={() =>
+                      setInputValue(
+                        "The page is loading slowly. Can you help optimize it?"
+                      )
+                    }
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/50 text-blue-700 dark:text-blue-300 rounded-full border border-blue-200 dark:border-blue-800 transition-colors"
                   >
                     <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
                     L1: Performance
                   </button>
-                  
+
                   {/* L2 Support Pills */}
                   <button
-                    onClick={() => setInputValue("I'm getting a 500 error when submitting forms. Can you help debug this?")}
+                    onClick={() =>
+                      setInputValue(
+                        "I'm getting a 500 error when submitting forms. Can you help debug this?"
+                      )
+                    }
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-950/50 text-amber-700 dark:text-amber-300 rounded-full border border-amber-200 dark:border-amber-800 transition-colors"
                   >
                     <div className="w-1.5 h-1.5 bg-amber-500 rounded-full"></div>
                     L2: API debugging
                   </button>
                   <button
-                    onClick={() => setInputValue("My database queries are running slowly. How can I optimize them?")}
+                    onClick={() =>
+                      setInputValue(
+                        "My database queries are running slowly. How can I optimize them?"
+                      )
+                    }
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-950/50 text-amber-700 dark:text-amber-300 rounded-full border border-amber-200 dark:border-amber-800 transition-colors"
                   >
                     <div className="w-1.5 h-1.5 bg-amber-500 rounded-full"></div>
                     L2: DB optimization
                   </button>
                   <button
-                    onClick={() => setInputValue("My React components are re-rendering too often. How can I fix this?")}
+                    onClick={() =>
+                      setInputValue(
+                        "My React components are re-rendering too often. How can I fix this?"
+                      )
+                    }
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-950/50 text-amber-700 dark:text-amber-300 rounded-full border border-amber-200 dark:border-amber-800 transition-colors"
                   >
                     <div className="w-1.5 h-1.5 bg-amber-500 rounded-full"></div>
                     L2: React optimization
                   </button>
-                  
+
                   {/* L3 Support Pills */}
                   <button
-                    onClick={() => setInputValue("I need to design a microservices architecture for my application. Can you help?")}
+                    onClick={() =>
+                      setInputValue(
+                        "I need to design a microservices architecture for my application. Can you help?"
+                      )
+                    }
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 text-red-700 dark:text-red-300 rounded-full border border-red-200 dark:border-red-800 transition-colors"
                   >
                     <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
                     L3: Architecture
                   </button>
                   <button
-                    onClick={() => setInputValue("How do I implement distributed caching across multiple services?")}
+                    onClick={() =>
+                      setInputValue(
+                        "How do I implement distributed caching across multiple services?"
+                      )
+                    }
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 text-red-700 dark:text-red-300 rounded-full border border-red-200 dark:border-red-800 transition-colors"
                   >
                     <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
                     L3: Distributed systems
                   </button>
                   <button
-                    onClick={() => setInputValue("Can you help me design a scalable CI/CD pipeline for enterprise deployment?")}
+                    onClick={() =>
+                      setInputValue(
+                        "Can you help me design a scalable CI/CD pipeline for enterprise deployment?"
+                      )
+                    }
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 text-red-700 dark:text-red-300 rounded-full border border-red-200 dark:border-red-800 transition-colors"
                   >
                     <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
