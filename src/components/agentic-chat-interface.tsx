@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,8 +11,10 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Suspense } from "react";
-import { MDXRemote } from "next-mdx-remote-client/rsc";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeHighlight from "rehype-highlight";
+import "highlight.js/styles/github.css";
 
 import {
   Send,
@@ -60,6 +61,110 @@ import { ChatMessage } from "@/lib/database";
 import { generateUUID } from "@/lib/utils";
 import { InfinityKBLogoHero } from "./ui/infinity-kb-logo";
 import { buildApiUrl, API_ENDPOINTS } from "@/lib/api-config";
+
+// Enhanced Markdown Renderer Component
+const MarkdownRenderer: React.FC<{ content: string; className?: string }> = ({
+  content,
+  className = "",
+}) => {
+  return (
+    <div className={`prose prose-sm max-w-none dark:prose-invert ${className}`}>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeHighlight]}
+        components={{
+          // Custom styling for different elements
+          h1: ({ children }) => (
+            <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">
+              {children}
+            </h1>
+          ),
+          h2: ({ children }) => (
+            <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-3">
+              {children}
+            </h2>
+          ),
+          h3: ({ children }) => (
+            <h3 className="text-base font-medium text-slate-700 dark:text-slate-300 mb-2">
+              {children}
+            </h3>
+          ),
+          p: ({ children }) => (
+            <p className="text-slate-600 dark:text-slate-400 mb-3 leading-relaxed">
+              {children}
+            </p>
+          ),
+          ul: ({ children }) => (
+            <ul className="list-disc list-inside mb-3 space-y-1 text-slate-600 dark:text-slate-400">
+              {children}
+            </ul>
+          ),
+          ol: ({ children }) => (
+            <ol className="list-decimal list-inside mb-3 space-y-1 text-slate-600 dark:text-slate-400">
+              {children}
+            </ol>
+          ),
+          li: ({ children }) => (
+            <li className="text-slate-600 dark:text-slate-400">{children}</li>
+          ),
+          blockquote: ({ children }) => (
+            <blockquote className="border-l-4 border-blue-500 pl-4 py-2 bg-blue-50 dark:bg-blue-950/30 rounded-r-md mb-3">
+              {children}
+            </blockquote>
+          ),
+          code: ({ children, className, ...props }: any) => {
+            const isInline = !className || !className.includes("language-");
+            if (isInline) {
+              return (
+                <code
+                  className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-sm font-mono text-slate-800 dark:text-slate-200"
+                  {...props}
+                >
+                  {children}
+                </code>
+              );
+            }
+            return (
+              <code
+                className="block bg-slate-100 dark:bg-slate-800 p-3 rounded-md text-sm font-mono overflow-x-auto"
+                {...props}
+              >
+                {children}
+              </code>
+            );
+          },
+          pre: ({ children }) => (
+            <pre className="bg-slate-100 dark:bg-slate-800 p-4 rounded-md overflow-x-auto mb-3">
+              {children}
+            </pre>
+          ),
+          strong: ({ children }) => (
+            <strong className="font-semibold text-slate-900 dark:text-slate-100">
+              {children}
+            </strong>
+          ),
+          em: ({ children }) => (
+            <em className="italic text-slate-700 dark:text-slate-300">
+              {children}
+            </em>
+          ),
+          a: ({ href, children }) => (
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 underline"
+            >
+              {children}
+            </a>
+          ),
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
+  );
+};
 
 // AI Response Match structure
 interface AIResponseMatch {
@@ -962,14 +1067,7 @@ export function AgenticChatInterface({
                 message.aiResponse &&
                 message.aiResponse.matches && (
                   <div className="mt-4">
-                    <Suspense fallback={<>Summary loading...</>}>
-                      <MDXRemote
-                        source={message.aiResponse.ai_summary}
-                      />
-                    </Suspense>
-                    <div>
-                      {/* <p>{JSON.parse(message.aiResponse.ai_summary)}</p> */}
-                    </div>
+                    <MarkdownRenderer content={message.aiResponse.ai_summary} />
                     <div className="flex items-center gap-2 mb-3">
                       <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
                         Drawing from the following tickets, I identified the
