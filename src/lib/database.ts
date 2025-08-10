@@ -304,6 +304,29 @@ export interface ChatMessage {
   };
 }
 
+// API Trace Log Models
+export interface TraceLog {
+  id?: number;
+  uuid: string;
+  traceId: string;
+  spanId: string;
+  operationName: string;
+  startTime: number;
+  endTime?: number;
+  duration?: number;
+  status: 'success' | 'error' | 'pending';
+  method?: string;
+  url?: string;
+  statusCode?: number;
+  error?: string;
+  metadata?: Record<string, any>;
+  tags?: Record<string, string>;
+  organizationId?: string;
+  userId?: string;
+  projectId?: string;
+  createdAt: Date;
+}
+
 // Database Class
 export class AppDatabase extends Dexie {
   users!: Table<User>;
@@ -320,11 +343,12 @@ export class AppDatabase extends Dexie {
   githubDiscussions!: Table<GitHubDiscussion>;
   chatSessions!: Table<ChatSession>;
   chatMessages!: Table<ChatMessage>;
+  traceLogs!: Table<TraceLog>;
 
   constructor() {
     super('InfinityKBDatabase');
     
-    this.version(4).stores({
+    this.version(5).stores({
       users: '++id, uuid, email, organizationId, role, isActive, createdAt',
       organizations: '++id, uuid, name, domain, ownerId, isActive, createdAt',
       projects: '++id, uuid, name, organizationId, createdBy, status, createdAt',
@@ -338,7 +362,8 @@ export class AppDatabase extends Dexie {
       githubPullRequests: '++id, uuid, githubId, number, repository, state, organizationId, sourceId, syncedAt',
       githubDiscussions: '++id, uuid, githubId, number, repository, state, organizationId, sourceId, syncedAt',
       chatSessions: '++id, uuid, userId, organizationId, projectId, status, lastMessageAt, createdAt',
-      chatMessages: '++id, uuid, sessionId, sender, type, timestamp'
+      chatMessages: '++id, uuid, sessionId, sender, type, timestamp',
+      traceLogs: '++id, uuid, traceId, spanId, operationName, status, startTime, duration, createdAt'
     });
 
     // Hooks for automatic timestamps and UUIDs
@@ -376,7 +401,7 @@ export class AppDatabase extends Dexie {
     });
 
     // Add hooks for other tables
-    ['projectMembers', 'accessRequests', 'sessions', 'userPermissions', 'auditLogs', 'apiKeys'].forEach(tableName => {
+    ['projectMembers', 'accessRequests', 'sessions', 'userPermissions', 'auditLogs', 'apiKeys', 'traceLogs'].forEach(tableName => {
       (this as any)[tableName].hook('creating', function (primKey: any, obj: any, trans: any) {
         obj.uuid = obj.uuid || generateUUID();
         if (tableName === 'sessions') {
@@ -417,6 +442,10 @@ export class AppDatabase extends Dexie {
           obj.uuid = obj.uuid || generateUUID();
           obj.timestamp = obj.timestamp || new Date();
           obj.type = obj.type || 'text';
+        } else if (tableName === 'traceLogs') {
+          obj.uuid = obj.uuid || generateUUID();
+          obj.createdAt = obj.createdAt || new Date();
+          obj.status = obj.status || 'pending';
         }
       });
     });

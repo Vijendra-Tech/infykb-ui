@@ -19,6 +19,7 @@ import {
   Palette,
   ChevronUp,
   LogOut,
+  Activity,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -382,6 +383,12 @@ export const Sidebar = () => {
               label="Dashboard"
               active={pathname === "/dashboard"}
               href="/dashboard"
+            />
+            <SidebarItem
+              icon={<Activity className="h-5 w-5" />}
+              label="API Logs"
+              active={pathname === "/logs"}
+              href="/logs"
             />
             <SidebarItem
               icon={<Users className="h-5 w-5" />}

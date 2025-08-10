@@ -1,0 +1,338 @@
+'use client'
+
+import React, { useState, useEffect } from 'react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { 
+  Activity, 
+  Clock, 
+  CheckCircle, 
+  XCircle, 
+  AlertCircle, 
+  Search, 
+  Trash2, 
+  RefreshCw,
+  Globe,
+  Database,
+  Code,
+  BarChart3
+} from 'lucide-react'
+import { 
+  getAllTraces, 
+  getTraceStats, 
+  clearTraces, 
+  cleanupPendingTraces,
+  type TraceLog 
+} from '@/lib/browser-telemetry'
+
+interface LogsPageProps {
+  className?: string
+}
+
+export function LogsPage({ className }: LogsPageProps) {
+  const [traces, setTraces] = useState<TraceLog[]>([])
+  const [filteredTraces, setFilteredTraces] = useState<TraceLog[]>([])
+  const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [stats, setStats] = useState({
+    total: 0,
+    success: 0,
+    error: 0,
+    pending: 0,
+    avgDuration: 0,
+  })
+
+  // Refresh traces data
+  const refreshTraces = async () => {
+    try {
+      // Clean up old pending traces first
+      await cleanupPendingTraces()
+      const allTraces = await getAllTraces()
+      const traceStats = await getTraceStats()
+      setTraces(allTraces)
+      setStats(traceStats)
+    } catch (error) {
+      console.error('Failed to refresh traces:', error)
+    }
+  }
+
+  // Auto-refresh every 2 seconds
+  useEffect(() => {
+    refreshTraces()
+    const interval = setInterval(refreshTraces, 2000)
+    return () => clearInterval(interval)
+  }, [])
+
+  // Filter traces based on search and status
+  useEffect(() => {
+    let filtered = traces
+
+    // Filter by status
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(trace => trace.status === statusFilter)
+    }
+
+    // Filter by search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase()
+      filtered = filtered.filter(trace =>
+        trace.operationName.toLowerCase().includes(query) ||
+        trace.url?.toLowerCase().includes(query) ||
+        trace.method?.toLowerCase().includes(query) ||
+        trace.error?.toLowerCase().includes(query)
+      )
+    }
+
+    setFilteredTraces(filtered)
+  }, [traces, searchQuery, statusFilter])
+
+  const getStatusIcon = (status: TraceLog['status']) => {
+    switch (status) {
+      case 'success':
+        return <CheckCircle className="h-4 w-4 text-green-500" />
+      case 'error':
+        return <XCircle className="h-4 w-4 text-red-500" />
+      case 'pending':
+        return <AlertCircle className="h-4 w-4 text-yellow-500" />
+      default:
+        return <Activity className="h-4 w-4 text-gray-500" />
+    }
+  }
+
+  const getStatusBadge = (status: TraceLog['status']) => {
+    const variants = {
+      success: 'bg-green-100 text-green-800 border-green-200',
+      error: 'bg-red-100 text-red-800 border-red-200',
+      pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+    }
+    return (
+      <Badge variant="outline" className={variants[status]}>
+        {status.toUpperCase()}
+      </Badge>
+    )
+  }
+
+  const getOperationIcon = (operationName: string) => {
+    if (operationName.includes('HTTP') || operationName.includes('API')) {
+      return <Globe className="h-4 w-4" />
+    }
+    if (operationName.includes('DB')) {
+      return <Database className="h-4 w-4" />
+    }
+    return <Code className="h-4 w-4" />
+  }
+
+  const formatDuration = (duration?: number) => {
+    if (!duration) return 'N/A'
+    if (duration < 1000) return `${duration}ms`
+    return `${(duration / 1000).toFixed(2)}s`
+  }
+
+  const formatTimestamp = (timestamp: number) => {
+    return new Date(timestamp).toLocaleString()
+  }
+
+  const handleClearLogs = () => {
+    clearTraces()
+    refreshTraces()
+  }
+
+  return (
+    <div className={`space-y-6 p-6 ${className}`}>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">API Call Logs</h1>
+          <p className="text-muted-foreground">
+            Monitor and trace all API calls with OpenTelemetry
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={refreshTraces}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleClearLogs}>
+            <Trash2 className="h-4 w-4 mr-2" />
+            Clear Logs
+          </Button>
+        </div>
+      </div>
+
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Calls</CardTitle>
+            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.total}</div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Successful</CardTitle>
+            <CheckCircle className="h-4 w-4 text-green-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{stats.success}</div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Failed</CardTitle>
+            <XCircle className="h-4 w-4 text-red-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">{stats.error}</div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending</CardTitle>
+            <AlertCircle className="h-4 w-4 text-yellow-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Avg Duration</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatDuration(stats.avgDuration)}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters */}
+      <div className="flex items-center gap-4">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search operations, URLs, errors..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-32">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="success">Success</SelectItem>
+            <SelectItem value="error">Error</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Logs Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent API Calls</CardTitle>
+          <CardDescription>
+            Showing {filteredTraces.length} of {traces.length} traced operations
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ScrollArea className="h-[600px]">
+            <div className="space-y-2">
+              {filteredTraces.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No API calls found</p>
+                  <p className="text-sm">Start using the application to see traced operations</p>
+                </div>
+              ) : (
+                filteredTraces.map((trace) => (
+                  <Card key={trace.id} className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start gap-3 flex-1">
+                        <div className="mt-1">
+                          {getOperationIcon(trace.operationName)}
+                        </div>
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-medium truncate">{trace.operationName}</h4>
+                            {getStatusBadge(trace.status)}
+                            {trace.method && (
+                              <Badge variant="secondary" className="text-xs">
+                                {trace.method}
+                              </Badge>
+                            )}
+                          </div>
+                          
+                          {trace.url && (
+                            <p className="text-sm text-muted-foreground truncate mb-1">
+                              {trace.url}
+                            </p>
+                          )}
+                          
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {formatTimestamp(trace.startTime)}
+                            </span>
+                            
+                            {trace.duration && (
+                              <span>Duration: {formatDuration(trace.duration)}</span>
+                            )}
+                            
+                            {trace.statusCode && (
+                              <span>Status: {trace.statusCode}</span>
+                            )}
+                          </div>
+                          
+                          {trace.error && (
+                            <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-800">
+                              <strong>Error:</strong> {trace.error}
+                            </div>
+                          )}
+                          
+                          {trace.metadata && Object.keys(trace.metadata).length > 0 && (
+                            <details className="mt-2">
+                              <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">
+                                View Metadata
+                              </summary>
+                              <pre className="mt-1 p-2 bg-muted rounded text-xs overflow-x-auto">
+                                {JSON.stringify(trace.metadata, null, 2)}
+                              </pre>
+                            </details>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 ml-4">
+                        {getStatusIcon(trace.status)}
+                        <span className="text-xs text-muted-foreground">
+                          {trace.traceId.slice(0, 8)}...
+                        </span>
+                      </div>
+                    </div>
+                  </Card>
+                ))
+              )}
+            </div>
+          </ScrollArea>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}

@@ -27,28 +27,19 @@ import {
   Copy,
   ThumbsUp,
   ThumbsDown,
-  Network,
   Search,
   RefreshCw,
-  Target,
   Paperclip,
-  Code,
-  Settings,
   Plus,
-  MessageSquare,
 } from "lucide-react";
 
 import {
   GitHubIssue,
-  githubService,
-  formatIssueDate,
 } from "@/lib/github-service";
 import {
-  enhancedGitHubService,
   MultiRepoSearchResult,
 } from "@/lib/enhanced-github-service";
 import {
-  agenticAI,
   AnalysisResult,
   SolutionSuggestion,
 } from "@/lib/agentic-ai-service";
@@ -61,6 +52,7 @@ import { ChatMessage } from "@/lib/database";
 import { generateUUID } from "@/lib/utils";
 import { InfinityKBLogoHero } from "./ui/infinity-kb-logo";
 import { buildApiUrl, API_ENDPOINTS } from "@/lib/api-config";
+import { instrumentedFetch } from "@/lib/instrumented-api";
 
 // Enhanced Markdown Renderer Component
 const MarkdownRenderer: React.FC<{ content: string; className?: string }> = ({
@@ -105,7 +97,7 @@ const MarkdownRenderer: React.FC<{ content: string; className?: string }> = ({
             </ol>
           ),
           li: ({ children }) => (
-            <li className="text-slate-600 dark:text-slate-400">{children}</li>
+            <li className="text-slate-600 dark:text-slate-400">{  }</li>
           ),
           blockquote: ({ children }) => (
             <blockquote className="border-l-4 border-blue-500 pl-4 py-2 bg-blue-50 dark:bg-blue-950/30 rounded-r-md mb-3">
@@ -209,14 +201,6 @@ interface Message {
   followUpQuestions?: string[];
 }
 
-interface KnowledgeGraphNode {
-  id: string;
-  label: string;
-  type: "concept" | "issue" | "solution" | "code";
-  description?: string;
-  connections: string[];
-}
-
 interface AgenticChatProps {
   className?: string;
   sessionId?: string;
@@ -267,53 +251,36 @@ export function AgenticChatInterface({
 
   // Function to simulate AI response with the provided structure
   const getAIResponse = async (query: string) => {
-    const res = await fetch(buildApiUrl(API_ENDPOINTS.SEARCH), {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ content: query }),
-    });
+    try {
+      const res = await instrumentedFetch(buildApiUrl(API_ENDPOINTS.SEARCH), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ content: query }),
+      });
 
-    if (res.ok) {
-      const data = await res.json();
-      return data;
+      if (res.ok) {
+        const data = await res.json();
+        return data;
+      }
+
+      // Log the error response for failed API calls
+      console.error(`Search API failed with status ${res.status}: ${res.statusText}`);
+      
+      return {
+        matches: [],
+        error: `API call failed with status ${res.status}: ${res.statusText}`,
+      };
+    } catch (error) {
+      // Ensure errors are logged and traced
+      console.error('Search API error:', error);
+      return {
+        matches: [],
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
+      };
     }
-
-    return {
-      matches: [],
-    };
   };
-
-  // Function to generate summary from matches
-  // const generateSummary = async (
-  //   matches: AIResponseMatch[]
-  // ): Promise<string> => {
-  //   // Simulate AI processing time
-  //   await new Promise((resolve) =>
-  //     setTimeout(resolve, 800 + Math.random() * 1200)
-  //   );
-
-  //   // Generate a comprehensive summary based on the matches
-  //   const topMatch = matches[0];
-  //   const totalMatches = matches.length;
-
-  //   return (
-  //     `Based on ${totalMatches} relevant matches found, here's a comprehensive summary:\n\n` +
-  //     `The primary issue appears to be "${
-  //       topMatch.title
-  //     }" with a confidence score of ${topMatch.score.toFixed(4)}. ` +
-  //     `This issue was reported by user ${
-  //       topMatch.user
-  //     } and involves ${topMatch.summary.substring(0, 100)}...\n\n` +
-  //     `Key themes across all matches include security group inheritance, record modification behaviors, and potential bugs in custom modules. ` +
-  //     `The issues span from ${new Date(
-  //       matches[matches.length - 1].created
-  //     ).getFullYear()} to ${new Date(matches[0].created).getFullYear()}, ` +
-  //     `indicating this is an ongoing concern in the system.\n\n` +
-  //     `Recommended next steps: Review the highest-scoring match for immediate solutions, and consider the patterns across all matches for systemic improvements.`
-  //   );
-  // };
 
   // Function to handle individual match summarize button click
   const handleMatchSummarize = async (
