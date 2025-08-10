@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -25,6 +25,7 @@ export function TracingDemo() {
   const [results, setResults] = useState<any[]>([])
   const [githubRepo, setGithubRepo] = useState('microsoft/TypeScript')
   const [apiUrl, setApiUrl] = useState('https://jsonplaceholder.typicode.com/posts/1')
+  const [stats, setStats] = useState({ total: 0, success: 0, error: 0, pending: 0, avgDuration: 0 })
 
   const addResult = (type: string, success: boolean, data?: any, error?: string) => {
     const result = {
@@ -176,7 +177,21 @@ export function TracingDemo() {
     )
   }
 
-  const stats = getTraceStats()
+  // Load stats on component mount and refresh periodically
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        const currentStats = await getTraceStats()
+        setStats(currentStats)
+      } catch (error) {
+        console.error('Failed to load stats:', error)
+      }
+    }
+    
+    loadStats()
+    const interval = setInterval(loadStats, 2000)
+    return () => clearInterval(interval)
+  }, [])
 
   return (
     <div className="space-y-6 p-6">

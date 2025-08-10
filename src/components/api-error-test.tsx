@@ -23,9 +23,13 @@ export function ApiErrorTest() {
   const [testResults, setTestResults] = useState<any[]>([])
   const [stats, setStats] = useState({ total: 0, success: 0, error: 0, pending: 0, avgDuration: 0 })
 
-  const updateStats = () => {
-    const currentStats = getTraceStats()
-    setStats(currentStats)
+  const updateStats = async () => {
+    try {
+      const currentStats = await getTraceStats()
+      setStats(currentStats)
+    } catch (error) {
+      console.error('Failed to update stats:', error)
+    }
   }
 
   const addTestResult = (test: string, success: boolean, details: string) => {
@@ -140,14 +144,18 @@ export function ApiErrorTest() {
   }
 
   // Check current traces
-  const checkTraces = () => {
-    const traces = getAllTraces()
-    const errorTraces = traces.filter(t => t.status === 'error')
+  const checkTraces = async () => {
+    try {
+      const traces = await getAllTraces()
+      const errorTraces = traces.filter(t => t.status === 'error')
+
+      console.log('📊 Current Traces:', traces)
+      console.log('❌ Error Traces:', errorTraces)
     
-    console.log('📊 Current Traces:', traces)
-    console.log('❌ Error Traces:', errorTraces)
-    
-    addTestResult('Trace Check', true, `Found ${traces.length} total traces, ${errorTraces.length} error traces`)
+      addTestResult('Trace Check', true, `Found ${traces.length} total traces, ${errorTraces.length} error traces`)
+    } catch (error) {
+      console.error('Failed to check traces:', error)
+    }
   }
 
   return (
