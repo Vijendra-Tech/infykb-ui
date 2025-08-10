@@ -94,6 +94,8 @@ export interface SimilaritySearchResult {
   snippet: string;
 }
 
+import { traceHttpCall, traceApiCall } from '../lib/browser-telemetry';
+
 export class GitHubService {
   private baseUrl = 'https://api.github.com';
   
@@ -150,35 +152,69 @@ export class GitHubService {
   }
 
   async testConnection(repositoryUrl: string, accessToken?: string): Promise<{ success: boolean; error?: string }> {
-    try {
-      const repoInfo = this.parseRepositoryUrl(new URL(repositoryUrl));
-      if (!repoInfo) {
-        return { success: false, error: 'Invalid repository URL format' };
-      }
+    return await traceApiCall(
+      'GitHub Connection Test',
+      async () => {
+        try {
+          const repoInfo = this.parseRepositoryUrl(new URL(repositoryUrl));
+          if (!repoInfo) {
+            return { success: false, error: 'Invalid repository URL format' };
+          }
 
-      const response = await fetch(
-        `${this.baseUrl}/repos/${repoInfo.owner}/${repoInfo.repo}`,
-        {
-          headers: this.getHeaders(accessToken)
+          const apiUrl = `${this.baseUrl}/repos/${repoInfo.owner}/${repoInfo.repo}`;
+          const response = await traceHttpCall(
+            'GitHub Repository Info',
+            async () => await fetch(apiUrl, {
+              headers: this.getHeaders(accessToken)
+            }),
+            {
+              method: 'GET',
+              url: apiUrl,
+              metadata: {
+                repository: repositoryUrl,
+                owner: repoInfo.owner,
+                repo: repoInfo.repo,
+                hasAccessToken: !!accessToken
+              },
+              tags: {
+                operation: 'connection-test',
+                source: 'github',
+                component: 'github-service'
+              }
+            }
+          );
+
+          if (response.status === 404) {
+            return { success: false, error: 'Repository not found or not accessible' };
+          }
+
+          if (response.status === 401) {
+            return { success: false, error: 'Invalid access token or insufficient permissions' };
+          }
+
+          if (!response.ok) {
+            return { success: false, error: `GitHub API error: ${response.status} ${response.statusText}` };
+          }
+
+          return { success: true };
+        } catch (error) {
+          console.error('GitHub connection test failed:', error);
+          return { success: false, error: error instanceof Error ? error.message : 'Connection test failed' };
         }
-      );
-
-      if (response.status === 404) {
-        return { success: false, error: 'Repository not found or not accessible' };
+      },
+      {
+        metadata: {
+          repository: repositoryUrl,
+          hasAccessToken: !!accessToken,
+          operation: 'connection-test'
+        },
+        tags: {
+          operation: 'connection-test',
+          source: 'github',
+          component: 'github-service'
+        }
       }
-
-      if (response.status === 401) {
-        return { success: false, error: 'Invalid access token or insufficient permissions' };
-      }
-
-      if (!response.ok) {
-        return { success: false, error: `GitHub API error: ${response.status} ${response.statusText}` };
-      }
-
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: `Connection failed: ${error instanceof Error ? error.message : 'Unknown error'}` };
-    }
+    );
   }
 
   async fetchIssues(
@@ -186,32 +222,78 @@ export class GitHubService {
     accessToken?: string, 
     options: { state?: 'open' | 'closed' | 'all'; per_page?: number; page?: number } = {}
   ): Promise<GitHubIssue[]> {
-    const repoInfo = this.parseRepositoryUrl(new URL(repositoryUrl));
-    if (!repoInfo) {
-      throw new Error('Invalid repository URL format');
-    }
+    return await traceApiCall(
+      'GitHub Fetch Issues',
+      async () => {
+        try {
+          const repoInfo = this.parseRepositoryUrl(new URL(repositoryUrl));
+          if (!repoInfo) {
+            throw new Error('Invalid repository URL format');
+          }
 
-    const params = new URLSearchParams({
-      state: options.state || 'all',
-      per_page: (options.per_page || 100).toString(),
-      page: (options.page || 1).toString()
-    });
+          const params = new URLSearchParams({
+            state: options.state || 'all',
+            per_page: (options.per_page || 100).toString(),
+            page: (options.page || 1).toString()
+          });
 
-    const response = await fetch(
-      `${this.baseUrl}/repos/${repoInfo.owner}/${repoInfo.repo}/issues?${params}`,
+          const apiUrl = `${this.baseUrl}/repos/${repoInfo.owner}/${repoInfo.repo}/issues?${params}`;
+          const response = await traceHttpCall(
+            'GitHub Issues API',
+            async () => await fetch(apiUrl, {
+              headers: this.getHeaders(accessToken)
+            }),
+            {
+              method: 'GET',
+              url: apiUrl,
+              metadata: {
+                repository: repositoryUrl,
+                owner: repoInfo.owner,
+                repo: repoInfo.repo,
+                state: options.state || 'all',
+                perPage: options.per_page || 100,
+                page: options.page || 1,
+                hasAccessToken: !!accessToken
+              },
+              tags: {
+                operation: 'fetch-issues',
+                source: 'github',
+                component: 'github-service'
+              }
+            }
+          );
+
+          if (!response.ok) {
+            throw new Error(`GitHub API error: ${response.status} ${response.statusText}`);
+          }
+
+          const issues = await response.json();
+          const filteredIssues = issues.filter((issue: any) => !issue.pull_request).map((issue: any) => ({
+            ...issue,
+            repository: `${repoInfo.owner}/${repoInfo.repo}`
+          }));
+
+          console.log(`✅ Fetched ${filteredIssues.length} issues from ${repoInfo.owner}/${repoInfo.repo}`);
+          return filteredIssues;
+        } catch (error) {
+          console.error('Failed to fetch GitHub issues:', error);
+          throw error;
+        }
+      },
       {
-        headers: this.getHeaders(accessToken)
+        metadata: {
+          repository: repositoryUrl,
+          options,
+          hasAccessToken: !!accessToken,
+          operation: 'fetch-issues'
+        },
+        tags: {
+          operation: 'fetch-issues',
+          source: 'github',
+          component: 'github-service'
+        }
       }
     );
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch issues: ${response.status} ${response.statusText}`);
-    }
-
-    const issues = await response.json();
-    
-    // Filter out pull requests (GitHub API includes PRs in issues endpoint)
-    return issues.filter((issue: any) => !issue.pull_request);
   }
 
   async fetchPullRequests(
@@ -219,29 +301,73 @@ export class GitHubService {
     accessToken?: string, 
     options: { state?: 'open' | 'closed' | 'all'; per_page?: number; page?: number } = {}
   ): Promise<GitHubPullRequest[]> {
-    const repoInfo = this.parseRepositoryUrl(new URL(repositoryUrl));
-    if (!repoInfo) {
-      throw new Error('Invalid repository URL format');
-    }
+    return await traceApiCall(
+      'GitHub Fetch Pull Requests',
+      async () => {
+        try {
+          const repoInfo = this.parseRepositoryUrl(new URL(repositoryUrl));
+          if (!repoInfo) {
+            throw new Error('Invalid repository URL format');
+          }
 
-    const params = new URLSearchParams({
-      state: options.state || 'all',
-      per_page: (options.per_page || 100).toString(),
-      page: (options.page || 1).toString()
-    });
+          const params = new URLSearchParams({
+            state: options.state || 'all',
+            per_page: (options.per_page || 100).toString(),
+            page: (options.page || 1).toString()
+          });
 
-    const response = await fetch(
-      `${this.baseUrl}/repos/${repoInfo.owner}/${repoInfo.repo}/pulls?${params}`,
+          const apiUrl = `${this.baseUrl}/repos/${repoInfo.owner}/${repoInfo.repo}/pulls?${params}`;
+          const response = await traceHttpCall(
+            'GitHub Pull Requests API',
+            async () => await fetch(apiUrl, {
+              headers: this.getHeaders(accessToken)
+            }),
+            {
+              method: 'GET',
+              url: apiUrl,
+              metadata: {
+                repository: repositoryUrl,
+                owner: repoInfo.owner,
+                repo: repoInfo.repo,
+                state: options.state || 'all',
+                perPage: options.per_page || 100,
+                page: options.page || 1,
+                hasAccessToken: !!accessToken
+              },
+              tags: {
+                operation: 'fetch-pull-requests',
+                source: 'github',
+                component: 'github-service'
+              }
+            }
+          );
+
+          if (!response.ok) {
+            throw new Error(`GitHub API error: ${response.status} ${response.statusText}`);
+          }
+
+          const pullRequests = await response.json();
+          console.log(`✅ Fetched ${pullRequests.length} pull requests from ${repoInfo.owner}/${repoInfo.repo}`);
+          return pullRequests;
+        } catch (error) {
+          console.error('Failed to fetch GitHub pull requests:', error);
+          throw error;
+        }
+      },
       {
-        headers: this.getHeaders(accessToken)
+        metadata: {
+          repository: repositoryUrl,
+          options,
+          hasAccessToken: !!accessToken,
+          operation: 'fetch-pull-requests'
+        },
+        tags: {
+          operation: 'fetch-pull-requests',
+          source: 'github',
+          component: 'github-service'
+        }
       }
     );
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch pull requests: ${response.status} ${response.statusText}`);
-    }
-
-    return await response.json();
   }
 
   async fetchDiscussions(

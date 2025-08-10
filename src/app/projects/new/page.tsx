@@ -6,6 +6,7 @@ import { useDexieAuthStore } from '@/store/use-dexie-auth-store';
 import { useDexieOrganizationStore } from '@/store/use-dexie-organization-store';
 import { useLLMSettingsStore, LLMProvider, providerNames, ModelOption, providerModels } from '@/store/use-llm-settings-store';
 import { buildApiUrl, API_ENDPOINTS } from '@/lib/api-config';
+import { traceApiCall, traceHttpCall } from '@/lib/browser-telemetry';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -85,80 +86,167 @@ export default function NewProjectPage() {
     setSuccess('');
     setIsLoading(true);
 
-    if (!formData.name || !formData.description) {
-      setError('Please fill in all required fields');
-      setIsLoading(false);
-      return;
-    }
+    return await traceApiCall(
+      `Create New Project - ${formData.name}`,
+      async () => {
+        if (!formData.name || !formData.description) {
+          setError('Please fill in all required fields');
+          setIsLoading(false);
+          return;
+        }
 
-    // Additional validation for Azure OpenAI
-    if (formData.modelProvider === 'azure') {
-      if (!formData.azureEndpoint || !formData.azureDeploymentName) {
-        setError('Please fill in all required Azure OpenAI fields (Endpoint and Deployment Name)');
-        setIsLoading(false);
-        return;
-      }
-    }
+        // Additional validation for Azure OpenAI
+        if (formData.modelProvider === 'azure') {
+          if (!formData.azureEndpoint || !formData.azureDeploymentName) {
+            setError('Please fill in all required Azure OpenAI fields (Endpoint and Deployment Name)');
+            setIsLoading(false);
+            return;
+          }
+        }
 
-    try {
-      const modelConfig: any = {
-        provider: formData.modelProvider as any,
-        modelId: formData.modelId,
-        apiKey: formData.apiKey,
-      };
-
-      // Add Azure-specific configuration if Azure provider is selected
-      if (formData.modelProvider === 'azure') {
-        modelConfig.azureConfig = {
-          endpoint: formData.azureEndpoint,
-          deploymentName: formData.azureDeploymentName,
-          apiVersion: formData.azureApiVersion,
-          embeddingModel: formData.azureEmbeddingModel || undefined,
-        };
-
-        // Validate Azure configuration
-
-        const res = await fetch(buildApiUrl(API_ENDPOINTS.PROJECTS), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            provider: formData.modelProvider,
+        try {
+          const modelConfig: any = {
+            provider: formData.modelProvider as any,
+            modelId: formData.modelId,
             apiKey: formData.apiKey,
-            azureEndpoint: formData.azureEndpoint,
-            azureDeployment: formData.azureDeploymentName,
-            azureApiVersion: formData.azureApiVersion,
-            azureEmbeddingModel: formData.azureEmbeddingModel || undefined,
-            projectName: formData.name || 'Default Project' // Use a default name if not set
-          })
-        });
-        if (!res.ok) {
-          const err = await res.json();
-          throw new Error(err.error || 'Failed to save credentials to Azure Key Vault');
+          };
+
+          // Add Azure-specific configuration if Azure provider is selected
+          if (formData.modelProvider === 'azure') {
+            modelConfig.azureConfig = {
+              endpoint: formData.azureEndpoint,
+              deploymentName: formData.azureDeploymentName,
+              apiVersion: formData.azureApiVersion,
+              embeddingModel: formData.azureEmbeddingModel || undefined,
+            };
+
+            // Validate Azure configuration with API logging
+            console.log('🔄 Saving Azure OpenAI credentials to Key Vault...');
+            const apiUrl = buildApiUrl(API_ENDPOINTS.PROJECTS);
+            const azurePayload = {
+              provider: formData.modelProvider,
+              apiKey: formData.apiKey,
+              azureEndpoint: formData.azureEndpoint,
+              azureDeployment: formData.azureDeploymentName,
+              azureApiVersion: formData.azureApiVersion,
+              azureEmbeddingModel: formData.azureEmbeddingModel || undefined,
+              projectName: formData.name || 'Default Project'
+            };
+
+            const res = await traceHttpCall(
+              'Azure Key Vault - Save Credentials',
+              async () => await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(azurePayload)
+              }),
+              {
+                method: 'POST',
+                url: apiUrl,
+                metadata: {
+                  projectName: formData.name,
+                  provider: formData.modelProvider,
+                  azureEndpoint: formData.azureEndpoint,
+                  azureDeployment: formData.azureDeploymentName,
+                  azureApiVersion: formData.azureApiVersion,
+                  hasEmbeddingModel: !!formData.azureEmbeddingModel,
+                  hasApiKey: !!formData.apiKey,
+                  userId: user?.id,
+                  userEmail: user?.email
+                },
+                tags: {
+                  operation: 'azure-credentials',
+                  source: 'azure-openai',
+                  component: 'project-creation'
+                }
+              }
+            );
+
+            if (!res.ok) {
+              const err = await res.json();
+              throw new Error(err.error || 'Failed to save credentials to Azure Key Vault');
+            }
+            console.log('✅ Azure OpenAI credentials saved successfully');
+          }
+
+          // Create project locally with API logging
+          console.log('🔄 Creating project locally...');
+          const result = await traceApiCall(
+            'Local Project Creation - Dexie',
+            async () => await createProject({
+              name: formData.name,
+              description: formData.description,
+              modelConfig,
+              permissions: {
+                allowedRoles: ['admin', 'member'],
+                restrictedFeatures: [],
+              },
+            }),
+            {
+              metadata: {
+                projectName: formData.name,
+                description: formData.description,
+                modelProvider: formData.modelProvider,
+                modelId: formData.modelId,
+                hasApiKey: !!formData.apiKey,
+                userId: user?.id,
+                userEmail: user?.email,
+                organizationId: user?.organizationId,
+                permissions: {
+                  allowedRoles: ['admin', 'member'],
+                  restrictedFeatures: []
+                }
+              },
+              tags: {
+                operation: 'project-creation',
+                database: 'dexie',
+                component: 'project-management'
+              }
+            }
+          );
+
+          if (result.success) {
+            console.log('✅ Project created successfully:', result);
+            setSuccess('Project created successfully!');
+            setTimeout(() => {
+              router.push('/projects');
+            }, 1500);
+          } else {
+            console.error('❌ Project creation failed:', result.error);
+            setError(result.error || 'Failed to create project');
+          }
+        } catch (err) {
+          console.error('❌ Project creation error:', err);
+          const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
+          setError(errorMessage);
+          throw err; // Re-throw to be caught by traceApiCall
+        } finally {
+          setIsLoading(false);
+        }
+      },
+      {
+        metadata: {
+          projectName: formData.name,
+          description: formData.description,
+          modelProvider: formData.modelProvider,
+          modelId: formData.modelId,
+          isAzureProvider: formData.modelProvider === 'azure',
+          userId: user?.id,
+          userEmail: user?.email,
+          organizationId: user?.organizationId,
+          formData: {
+            hasApiKey: !!formData.apiKey,
+            hasAzureEndpoint: !!formData.azureEndpoint,
+            hasAzureDeployment: !!formData.azureDeploymentName
+          }
+        },
+        tags: {
+          operation: 'project-creation',
+          component: 'new-project-page',
+          user: user?.email || 'unknown'
         }
       }
-      const result = await createProject({
-        name: formData.name,
-        description: formData.description,
-        modelConfig,
-        permissions: {
-          allowedRoles: ['admin', 'member'],
-          restrictedFeatures: [],
-        },
-      });
-
-      if (result.success) {
-        setSuccess('Project created successfully!');
-        setTimeout(() => {
-          router.push('/projects');
-        }, 1500);
-      } else {
-        setError(result.error || 'Failed to create project');
-      }
-    } catch (err) {
-      setError('An unexpected error occurred');
-    } finally {
-      setIsLoading(false);
-    }
+    );
   };
 
   const handleCancel = () => {

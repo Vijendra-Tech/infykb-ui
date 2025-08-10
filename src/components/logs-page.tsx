@@ -20,7 +20,15 @@ import {
   Globe,
   Database,
   Code,
-  BarChart3
+  BarChart3,
+  Copy,
+  ChevronDown,
+  ChevronRight,
+  Bug,
+  Package,
+  Info,
+  AlertTriangle,
+  Eye
 } from 'lucide-react'
 import { 
   getAllTraces, 
@@ -32,6 +40,199 @@ import {
 
 interface LogsPageProps {
   className?: string
+}
+
+// Enhanced metadata viewer component - defined outside to prevent state reset on re-renders
+const MetadataViewer = ({ trace }: { trace: TraceLog }) => {
+  const [isExpanded, setIsExpanded] = useState(false)
+  const [copiedSection, setCopiedSection] = useState<string | null>(null)
+
+  const copyToClipboard = async (text: string, section: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopiedSection(section)
+      setTimeout(() => setCopiedSection(null), 2000)
+    } catch (err) {
+      console.error('Failed to copy to clipboard:', err)
+    }
+  }
+
+  // Separate metadata into different categories
+  const errorDetails = {
+    error: trace.error,
+    errorName: trace.metadata?.errorName,
+    errorStack: trace.metadata?.errorStack,
+    statusCode: trace.statusCode
+  }
+
+  const requestPayload = {
+    method: trace.method,
+    url: trace.url,
+    headers: trace.metadata?.headers,
+    body: trace.metadata?.body,
+    params: trace.metadata?.params,
+    query: trace.metadata?.query
+  }
+
+  const operationContext = {
+    operationName: trace.operationName,
+    traceId: trace.traceId,
+    spanId: trace.spanId,
+    startTime: trace.startTime,
+    endTime: trace.endTime,
+    duration: trace.duration,
+    status: trace.status,
+    tags: trace.tags
+  }
+
+  const businessContext = trace.metadata ? {
+    userId: trace.metadata.userId,
+    userEmail: trace.metadata.userEmail,
+    organizationId: trace.metadata.organizationId,
+    projectId: trace.metadata.projectId,
+    projectName: trace.metadata.projectName,
+    sourceId: trace.metadata.sourceId,
+    sourceName: trace.metadata.sourceName,
+    repository: trace.metadata.repository,
+    ...Object.fromEntries(
+      Object.entries(trace.metadata).filter(([key]) => 
+        !['errorName', 'errorStack', 'headers', 'body', 'params', 'query', 
+          'userId', 'userEmail', 'organizationId', 'projectId', 'projectName', 
+          'sourceId', 'sourceName', 'repository'].includes(key)
+      )
+    )
+  } : {}
+
+  const renderSection = (title: string, data: any, icon: React.ReactNode, sectionKey: string) => {
+    const hasData = data && Object.values(data).some(v => v !== undefined && v !== null && v !== '')
+    if (!hasData) return null
+
+    const jsonString = JSON.stringify(data, null, 2)
+    
+    return (
+      <div className="border rounded-lg p-3 bg-slate-50">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            {icon}
+            <h5 className="font-medium text-sm">{title}</h5>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => copyToClipboard(jsonString, sectionKey)}
+            className="h-6 w-6 p-0"
+          >
+            {copiedSection === sectionKey ? (
+              <CheckCircle className="h-3 w-3 text-green-500" />
+            ) : (
+              <Copy className="h-3 w-3" />
+            )}
+          </Button>
+        </div>
+        <pre className="text-xs bg-white border rounded p-2 overflow-x-auto max-h-40">
+          {jsonString}
+        </pre>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mt-2">
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
+      >
+        {isExpanded ? (
+          <ChevronDown className="h-3 w-3 mr-1" />
+        ) : (
+          <ChevronRight className="h-3 w-3 mr-1" />
+        )}
+        <Eye className="h-3 w-3 mr-1" />
+        View Detailed Metadata
+      </Button>
+
+      {isExpanded && (
+        <div className="mt-3 space-y-3 border-l-2 border-blue-200 pl-4">
+          {/* Error Details Section */}
+          {trace.status === 'error' && renderSection(
+            'Error Details',
+            errorDetails,
+            <Bug className="h-4 w-4 text-red-500" />,
+            'error'
+          )}
+
+          {/* Request/Payload Section */}
+          {renderSection(
+            'Request Payload',
+            requestPayload,
+            <Package className="h-4 w-4 text-blue-500" />,
+            'payload'
+          )}
+
+          {/* Operation Context Section */}
+          {renderSection(
+            'Operation Context',
+            operationContext,
+            <Info className="h-4 w-4 text-purple-500" />,
+            'context'
+          )}
+
+          {/* Business Context Section */}
+          {renderSection(
+            'Business Context',
+            businessContext,
+            <BarChart3 className="h-4 w-4 text-green-500" />,
+            'business'
+          )}
+
+          {/* Raw Metadata (Fallback) */}
+          {trace.metadata && Object.keys(trace.metadata).length > 0 && (
+            <div className="border rounded-lg p-3 bg-gray-50">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Code className="h-4 w-4 text-gray-500" />
+                  <h5 className="font-medium text-sm">Raw Metadata</h5>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => copyToClipboard(JSON.stringify(trace.metadata, null, 2), 'raw')}
+                  className="h-6 w-6 p-0"
+                >
+                  {copiedSection === 'raw' ? (
+                    <CheckCircle className="h-3 w-3 text-green-500" />
+                  ) : (
+                    <Copy className="h-3 w-3" />
+                  )}
+                </Button>
+              </div>
+              <pre className="text-xs bg-white border rounded p-2 overflow-x-auto max-h-40">
+                {JSON.stringify(trace.metadata, null, 2)}
+              </pre>
+            </div>
+          )}
+
+          {/* Developer Tips */}
+          {trace.status === 'error' && (
+            <div className="border rounded-lg p-3 bg-amber-50 border-amber-200">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                <h5 className="font-medium text-sm text-amber-800">Developer Tips</h5>
+              </div>
+              <div className="text-xs text-amber-700 space-y-1">
+                <p>• Check the Error Details section for specific error information</p>
+                <p>• Review Request Payload for invalid parameters or missing data</p>
+                <p>• Verify Business Context for user permissions and resource access</p>
+                <p>• Use the trace ID ({trace.traceId.slice(0, 8)}...) for correlation across logs</p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
 }
 
 export function LogsPage({ className }: LogsPageProps) {
@@ -141,6 +342,8 @@ export function LogsPage({ className }: LogsPageProps) {
     clearTraces()
     refreshTraces()
   }
+
+
 
   return (
     <div className={`space-y-6 p-6 ${className}`}>
@@ -302,20 +505,21 @@ export function LogsPage({ className }: LogsPageProps) {
                           
                           {trace.error && (
                             <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-800">
-                              <strong>Error:</strong> {trace.error}
+                              <div className="flex items-center gap-2 mb-1">
+                                <Bug className="h-4 w-4 text-red-600" />
+                                <strong>Error:</strong>
+                              </div>
+                              <p className="font-mono text-xs">{trace.error}</p>
+                              {trace.metadata?.errorName && (
+                                <p className="text-xs mt-1">
+                                  <strong>Type:</strong> {trace.metadata.errorName}
+                                </p>
+                              )}
                             </div>
                           )}
                           
-                          {trace.metadata && Object.keys(trace.metadata).length > 0 && (
-                            <details className="mt-2">
-                              <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">
-                                View Metadata
-                              </summary>
-                              <pre className="mt-1 p-2 bg-muted rounded text-xs overflow-x-auto">
-                                {JSON.stringify(trace.metadata, null, 2)}
-                              </pre>
-                            </details>
-                          )}
+                          {/* Enhanced Metadata Viewer */}
+                          <MetadataViewer trace={trace} />
                         </div>
                       </div>
                       

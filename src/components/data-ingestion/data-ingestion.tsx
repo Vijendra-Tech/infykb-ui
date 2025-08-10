@@ -8,6 +8,7 @@ import { EditSourceDrawer } from "./edit-source-drawer";
 import { useDataIngestionStore, type IngestionSourceType, type IngestionSource } from "@/store/use-data-ingestion-store";
 import { githubService } from "@/services/github-service";
 import { githubDataService } from "@/services/github-data-service";
+import { traceApiCall, traceHttpCall } from "@/lib/browser-telemetry";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -314,26 +315,52 @@ export function DataIngestion() {
   };
 
   const handleGitHubIngestion = async (id: string, source: IngestionSource) => {
-    try {
-      if (!source.url) {
-        throw new Error('GitHub repository URL is required');
-      }
+    return await traceApiCall(
+      `GitHub Data Ingestion - ${source.name}`,
+      async () => {
+        try {
+          if (!source.url) {
+            throw new Error('GitHub repository URL is required');
+          }
 
-      // Extract GitHub settings from source
-      const githubSettings = {
-        repository: source.url,
-        accessToken: source.password, // Access token stored in password field
-        syncIssues: true, // Default to true, could be stored in source metadata
-        syncPRs: true,
-        syncDiscussions: false
-      };
+          // Extract GitHub settings from source
+          const githubSettings = {
+            repository: source.url,
+            accessToken: source.password, // Access token stored in password field
+            syncIssues: true, // Default to true, could be stored in source metadata
+            syncPRs: true,
+            syncDiscussions: false
+          };
 
-      console.log('Starting GitHub ingestion for:', githubSettings.repository);
-      
-      // Fetch GitHub data
-      const result = await githubService.ingestGitHubData(githubSettings);
-      
-      console.log('GitHub ingestion result:', result);
+          console.log('Starting GitHub ingestion for:', githubSettings.repository);
+          
+          // Fetch GitHub data with API tracing
+          const result = await traceHttpCall(
+            'GitHub API Data Fetch',
+            async () => await githubService.ingestGitHubData(githubSettings),
+            {
+              method: 'GET',
+              url: `https://api.github.com/repos/${githubSettings.repository.replace('https://github.com/', '')}`,
+              metadata: {
+                sourceId: id,
+                sourceName: source.name,
+                repository: githubSettings.repository,
+                syncOptions: {
+                  issues: githubSettings.syncIssues,
+                  pullRequests: githubSettings.syncPRs,
+                  discussions: githubSettings.syncDiscussions
+                },
+                hasAccessToken: !!githubSettings.accessToken
+              },
+              tags: {
+                operation: 'data-ingestion',
+                source: 'github',
+                component: 'github-service'
+              }
+            }
+          );
+          
+          console.log('GitHub ingestion result:', result);
       
       if (result.errors.length > 0) {
         console.warn('GitHub ingestion completed with errors:', result.errors);
@@ -348,18 +375,38 @@ export function DataIngestion() {
         pullRequests: result.pullRequests.length,
         discussions: result.discussions.length
       });
-      
-      if (totalRecords > 0) {
-        // Store the fetched GitHub data in Dexie database
-        console.log('Storing GitHub data in database...');
-        const storageResult = await githubDataService.storeGitHubData(result, {
-          sourceId: id,
-          organizationId: 'default-org', // TODO: Get from user context
-          projectId: undefined, // TODO: Get from user context if available
-          repository: githubSettings.repository
-        });
-        
-        console.log('GitHub data storage result:', storageResult);
+            if (totalRecords > 0) {
+            // Store the fetched GitHub data in Dexie database with API tracing
+            console.log('Storing GitHub data in database...');
+            const storageResult = await traceApiCall(
+              'GitHub Data Storage - Dexie',
+              async () => await githubDataService.storeGitHubData(result, {
+                sourceId: id,
+                organizationId: 'default-org', // TODO: Get from user context
+                projectId: undefined, // TODO: Get from user context if available
+                repository: githubSettings.repository
+              }),
+              {
+                metadata: {
+                  sourceId: id,
+                  sourceName: source.name,
+                  repository: githubSettings.repository,
+                  recordCounts: {
+                    issues: result.issues.length,
+                    pullRequests: result.pullRequests.length,
+                    discussions: result.discussions.length,
+                    total: totalRecords
+                  }
+                },
+                tags: {
+                  operation: 'data-storage',
+                  database: 'dexie',
+                  component: 'github-data-service'
+                }
+              }
+            );
+            
+            console.log('GitHub data storage result:', storageResult);
         
         // Check if storage had any errors
         if (storageResult.errors.length > 0) {
@@ -386,44 +433,117 @@ export function DataIngestion() {
       }
       
       setProcessingSourceId(null);
-    } catch (error) {
-      console.error('GitHub ingestion failed:', error);
-      failIngestion(id, error instanceof Error ? error.message : "GitHub ingestion failed", "GITHUB_ERROR");
-      setProcessingSourceId(null);
-    }
+        } catch (error) {
+          console.error('GitHub ingestion failed:', error);
+          failIngestion(id, error instanceof Error ? error.message : "GitHub ingestion failed", "GITHUB_ERROR");
+          setProcessingSourceId(null);
+          throw error; // Re-throw to be caught by traceApiCall
+        }
+      },
+      {
+        metadata: {
+          sourceId: id,
+          sourceName: source.name,
+          sourceType: source.type,
+          repository: source.url
+        },
+        tags: {
+          operation: 'data-ingestion',
+          source: 'github',
+          component: 'data-ingestion'
+        }
+      }
+    );
   };
 
   const handleGenericIngestion = async (id: string) => {
-    // Simulate ingestion for non-GitHub sources
-    return new Promise<void>((resolve) => {
-      setTimeout(() => {
-        try {
-          // Randomly succeed or fail (80% success rate)
-          const isSuccess = Math.random() > 0.2;
-          
-          if (isSuccess) {
-            const recordCount = Math.floor(Math.random() * 1000) + 100;
-            const processedDocs = recordCount - Math.floor(Math.random() * 10);
-            const failedDocs = recordCount - processedDocs;
-            
-            completeIngestion(id, recordCount, {
-              totalDocuments: recordCount,
-              processedDocuments: processedDocs,
-              failedDocuments: failedDocs
-            });
-          } else {
-            failIngestion(id, "Failed to process some documents due to formatting issues", "FORMAT_ERROR");
-          }
-          
-          setProcessingSourceId(null);
-          resolve();
-        } catch (err) {
-          failIngestion(id, "Unexpected error during processing", "SYSTEM_ERROR");
-          setProcessingSourceId(null);
-          resolve();
+    const source = sources.find(s => s.id === id);
+    const sourceName = source?.name || 'Unknown Source';
+    const sourceType = source?.type || 'Unknown';
+    
+    return await traceApiCall(
+      `Generic Data Ingestion - ${sourceName}`,
+      async () => {
+        // Simulate ingestion for non-GitHub sources with API tracing
+        return new Promise<void>((resolve, reject) => {
+          setTimeout(async () => {
+            try {
+              // Randomly succeed or fail (80% success rate)
+              const isSuccess = Math.random() > 0.2;
+              
+              if (isSuccess) {
+                const recordCount = Math.floor(Math.random() * 1000) + 100;
+                const processedDocs = recordCount - Math.floor(Math.random() * 10);
+                const failedDocs = recordCount - processedDocs;
+                
+                // Trace the data processing operation
+                await traceApiCall(
+                  `Data Processing - ${sourceName}`,
+                  async () => {
+                    // Simulate data processing
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    return {
+                      totalDocuments: recordCount,
+                      processedDocuments: processedDocs,
+                      failedDocuments: failedDocs
+                    };
+                  },
+                  {
+                    metadata: {
+                      sourceId: id,
+                      sourceName,
+                      sourceType,
+                      recordCounts: {
+                        total: recordCount,
+                        processed: processedDocs,
+                        failed: failedDocs
+                      }
+                    },
+                    tags: {
+                      operation: 'data-processing',
+                      source: sourceType.toLowerCase(),
+                      component: 'generic-processor'
+                    }
+                  }
+                );
+                
+                completeIngestion(id, recordCount, {
+                  totalDocuments: recordCount,
+                  processedDocuments: processedDocs,
+                  failedDocuments: failedDocs
+                });
+              } else {
+                const error = "Failed to process some documents due to formatting issues";
+                failIngestion(id, error, "FORMAT_ERROR");
+                reject(new Error(error));
+                return;
+              }
+              
+              setProcessingSourceId(null);
+              resolve();
+            } catch (err) {
+              const error = "Unexpected error during processing";
+              failIngestion(id, error, "SYSTEM_ERROR");
+              setProcessingSourceId(null);
+              reject(new Error(error));
+            }
+          }, 3000);
+        });
+      },
+      {
+        metadata: {
+          sourceId: id,
+          sourceName,
+          sourceType,
+          isSimulated: true
+        },
+        tags: {
+          operation: 'data-ingestion',
+          source: sourceType.toLowerCase(),
+          component: 'data-ingestion'
         }
-      }, 3000);
-    });
+      }
+    );
   };
 
   const getStatusBadge = (status: string) => {
